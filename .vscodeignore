@@ -1,0 +1,65 @@
+# VSCode should completely ignore these directories
+# This is more aggressive than files.exclude
+
+# Dependencies
+node_modules/
+.pnpm/
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Nx cache
+.nx/
+.angular/
+
+# Testing
+coverage/
+.nyc_output/
+test-output/
+
+# Caches
+.cache/
+.eslintcache
+.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Git internals
+.git/objects/
+.git/subtree-cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+.tmp/
+
+# Android/Gradle
+android/.gradle/
+android/build/
+android/app/build/
+.gradle/
+*.iml
+local.properties
+
+# iOS
+ios/build/
+ios/Pods/
+ios/Podfile.lock
+*.xcworkspace
+*.xcodeproj
+
+# Java
+*.class
+.classpath
+.project
+.settings/

@@ -1,0 +1,91 @@
+// Base Configuration
+// This file contains datasource, generator, and shared types/enums used across all domains
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// SHARED ENUMS - Used across multiple domains
+// ============================================================================
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  CAD
+  AUD
+  SGD
+  THB
+  VND
+  IDR
+  MYR
+  PHP
+}
+
+enum Language {
+  EN    // English
+  TH    // Thai
+  VI    // Vietnamese
+  ID    // Indonesian
+  MS    // Malay
+  ZH    // Chinese
+  JA    // Japanese
+  KO    // Korean
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+  WEBHOOK
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+// ============================================================================
+// NOTES ON COMMON PATTERNS
+// ============================================================================
+// Composite types are NOT supported on PostgreSQL (only MongoDB)
+//
+// For Address fields, add directly to models as needed:
+//   addressStreet     String
+//   addressStreet2    String?
+//   addressCity       String
+//   addressState      String?
+//   addressPostalCode String
+//   addressCountry    String
+//   addressLatitude   Float?
+//   addressLongitude  Float?
+//
+// For Contact Info fields, add directly to models as needed:
+//   contactEmail       String?
+//   contactPhone       String?
+//   contactWebsite     String?
+//   contactSocialMedia Json?  // {facebook: "url", instagram: "url", etc.}
+//
+// For Audit fields, add directly to each model that needs audit tracking:
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+//   createdBy String?
+//   updatedBy String?

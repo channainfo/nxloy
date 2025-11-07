@@ -1,0 +1,250 @@
+// Authentication & Authorization Domain
+// Models: User, Role, Permission, Session, RefreshToken, MFADevice, AuditLog
+
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  phone         String?   @unique
+  phoneVerified DateTime?
+  passwordHash  String?   // Nullable for OAuth-only users
+
+  // Profile
+  firstName     String
+  lastName      String
+  avatarUrl     String?
+  locale        Language  @default(EN)
+  timezone      String    @default("UTC")
+
+  // Status
+  status        Status    @default(ACTIVE)
+  lastLoginAt   DateTime?
+
+  // Relations
+  roles         UserRole[]
+  sessions      Session[]
+  refreshTokens RefreshToken[]
+  mfaDevices    MFADevice[]
+  auditLogs     AuditLog[]
+
+  // OAuth connections (can be extracted to separate model if needed)
+  oauthProvider String?   // google, facebook, apple, etc.
+  oauthId       String?   // Provider's user ID
+
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // Soft delete
+
+  @@map("users")
+}
+
+// ============================================================================
+// ROLE-BASED ACCESS CONTROL (RBAC)
+// ============================================================================
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique // SUPER_ADMIN, BUSINESS_OWNER, BUSINESS_MANAGER, CUSTOMER, etc.
+  description String?
+  isSystem    Boolean      @default(false) // System roles cannot be deleted
+
+  // Relations
+  permissions RolePermission[]
+  users       UserRole[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  resource    String           // customers, loyalty_programs, rewards, etc.
+  action      String           // create, read, update, delete, publish, etc.
+  description String?
+
+  // Relations
+  roles       RolePermission[]
+
+  createdAt   DateTime         @default(now())
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  // Optional: Scoped permissions (e.g., role only applies to specific business)
+  scopeType String?  // business, partner, global
+  scopeId   String?  // ID of the business/partner
+
+  grantedAt DateTime @default(now())
+  grantedBy String?
+  expiresAt DateTime? // Optional: time-limited roles
+
+  @@unique([userId, roleId, scopeType, scopeId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+
+  // Relations
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  grantedAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================================================
+// SESSION MANAGEMENT
+// ============================================================================
+
+model Session {
+  id           String    @id @default(cuid())
+  userId       String
+  token        String    @unique
+
+  // Session metadata
+  ipAddress    String?
+  userAgent    String?
+  deviceId     String?
+  deviceName   String?
+
+  // Lifecycle
+  expiresAt    DateTime
+  lastActiveAt DateTime  @default(now())
+  revokedAt    DateTime?
+  revokedBy    String?   // User ID who revoked (for admin revocation)
+
+  // Relations
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+
+  // Token family for refresh token rotation
+  family    String    // All rotations share same family
+
+  expiresAt DateTime
+  revokedAt DateTime?
+  replacedBy String?  // ID of the new token that replaced this one
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([family])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// MULTI-FACTOR AUTHENTICATION
+// ============================================================================
+
+enum MFAType {
+  TOTP        // Time-based OTP (Google Authenticator, Authy)
+  SMS         // SMS-based OTP
+  EMAIL       // Email-based OTP
+  BACKUP_CODE // Backup recovery codes
+}
+
+model MFADevice {
+  id         String    @id @default(cuid())
+  userId     String
+  type       MFAType
+  name       String    // User-friendly name: "iPhone", "Work Phone", etc.
+
+  // Device-specific data
+  secret     String?   // For TOTP
+  phone      String?   // For SMS
+  email      String?   // For EMAIL
+  backupCodes Json?    // Array of hashed backup codes
+
+  // Status
+  isVerified Boolean   @default(false)
+  isPrimary  Boolean   @default(false)
+  lastUsedAt DateTime?
+
+  // Relations
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("mfa_devices")
+}
+
+// ============================================================================
+// AUDIT LOGGING
+// ============================================================================
+
+enum AuditAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  GRANT_PERMISSION
+  REVOKE_PERMISSION
+  EXPORT_DATA
+  IMPORT_DATA
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  userId     String?     // Nullable for system actions
+  action     AuditAction
+  resource   String      // Table/entity name
+  resourceId String?     // ID of the affected record
+
+  // Change tracking
+  oldValues  Json?       // Previous state
+  newValues  Json?       // New state
+  metadata   Json?       // Additional context
+
+  // Request context
+  ipAddress  String?
+  userAgent  String?
+
+  // Relations
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt  DateTime    @default(now())
+
+  @@index([userId])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

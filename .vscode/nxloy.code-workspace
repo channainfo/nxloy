@@ -1,0 +1,152 @@
+{
+  "folders": [
+    {
+      "name": "🏠 Root",
+      "path": ".."
+    },
+    {
+      "name": "🔧 Backend",
+      "path": "../apps/backend"
+    },
+    {
+      "name": "🌐 Web",
+      "path": "../apps/web"
+    },
+    {
+      "name": "📱 Mobile",
+      "path": "../apps/mobile"
+    },
+    {
+      "name": "🤖 AI/MCP",
+      "path": "../apps/ai-mcp"
+    },
+    {
+      "name": "📦 Shared Types",
+      "path": "../packages/shared-types"
+    },
+    {
+      "name": "✅ Shared Validation",
+      "path": "../packages/shared-validation"
+    },
+    {
+      "name": "🛠️ Shared Utils",
+      "path": "../packages/shared-utils"
+    },
+    {
+      "name": "⚙️ Shared Config",
+      "path": "../packages/shared-config"
+    },
+    {
+      "name": "🏗️ Infrastructure",
+      "path": "../packages/infrastructure"
+    },
+    {
+      "name": "⛓️ Blockchain",
+      "path": "../packages/blockchain-contracts"
+    }
+  ],
+  "settings": {
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.next": true,
+      "**/.nx": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.next": true,
+      "**/.nx": true,
+      "**/pnpm-lock.yaml": true
+    },
+    "files.watcherExclude": {
+      "**/.git/objects/**": true,
+      "**/.git/subtree-cache/**": true,
+      "**/node_modules/**": true,
+      "**/dist/**": true,
+      "**/.next/**": true,
+      "**/.nx/**": true,
+      "**/coverage/**": true,
+      "**/.cache/**": true
+    },
+    "markdown.validate.enabled": true,
+    "markdown.validate.fileLinks.enabled": "ignore",
+    "markdown.preview.breaks": false,
+    "projectManager.git.baseFolders": [
+      "/Users/channaly/nxloy"
+    ],
+    "projectManager.git.maxDepthRecursion": 1
+  },
+  "extensions": {
+    "recommendations": [
+      "nrwl.angular-console",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "bradlc.vscode-tailwindcss",
+      "prisma.prisma",
+      "ms-vscode.vscode-typescript-next"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Nx: Serve Backend",
+        "type": "shell",
+        "command": "nx serve backend",
+        "problemMatcher": [],
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        }
+      },
+      {
+        "label": "Nx: Serve Web",
+        "type": "shell",
+        "command": "nx serve web",
+        "problemMatcher": [],
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        }
+      },
+      {
+        "label": "Nx: Test All",
+        "type": "shell",
+        "command": "nx affected:test",
+        "problemMatcher": [],
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        }
+      },
+      {
+        "label": "Nx: Build All",
+        "type": "shell",
+        "command": "nx run-many --target=build --all",
+        "problemMatcher": [],
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        }
+      },
+      {
+        "label": "Nx: Graph",
+        "type": "shell",
+        "command": "nx graph",
+        "problemMatcher": [],
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        }
+      }
+    ]
+  }
+}

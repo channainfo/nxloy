@@ -1,0 +1,692 @@
+openapi: 3.1.0
+
+info:
+  title: NxLoy Loyalty Platform API
+  version: 1.0.0
+  description: |
+    Multi-tenant loyalty platform with industry templates, flexible reward mechanisms,
+    and AI-powered recommendations.
+
+    **Key Features:**
+    - 21 predefined industry templates
+    - 6 loyalty rule types (points, punch cards, tiers, etc.)
+    - Reward catalog and redemption
+    - Partner network integration
+    - Subscription management
+    - Referral programs
+    - NFT/Blockchain rewards
+
+    **Multi-Tenancy:**
+    All endpoints require authentication and are scoped to the authenticated business (tenant).
+
+  contact:
+    name: Ploy Lab
+    url: https://nxloy.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.nxloy.com/v1
+    description: Production
+  - url: https://staging-api.nxloy.com/v1
+    description: Staging
+  - url: http://localhost:3000/api/v1
+    description: Local development (Backend)
+  - url: http://localhost:3001
+    description: Mock server (Prism)
+
+tags:
+  - name: Auth
+    description: Authentication and authorization
+  - name: Loyalty
+    description: Loyalty programs, rules, templates
+  - name: Rewards
+    description: Reward catalog and redemptions
+  - name: Customers
+    description: Customer profiles and management
+  - name: Transactions
+    description: Transaction tracking and processing
+  - name: Partners
+    description: Partner network and integrations
+  - name: Subscriptions
+    description: Subscription plans and billing
+  - name: Referrals
+    description: Referral programs and tracking
+  - name: Businesses
+    description: Business (tenant) management
+  - name: Analytics
+    description: Analytics and reporting
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==========================================
+  # Authentication Endpoints
+  # ==========================================
+
+  /auth/register:
+    post:
+      summary: Register new business
+      operationId: registerBusiness
+      tags: [Auth]
+      security: []  # Public endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterBusinessDto'
+      responses:
+        '201':
+          description: Business registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      summary: Login to business account
+      operationId: login
+      tags: [Auth]
+      security: []  # Public endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================
+  # Loyalty Templates Endpoints
+  # ==========================================
+
+  /loyalty/templates:
+    get:
+      summary: List loyalty templates
+      operationId: listLoyaltyTemplates
+      tags: [Loyalty]
+      description: |
+        Get a list of pre-configured loyalty rule templates filtered by industry.
+        Templates provide starting configurations that businesses can customize.
+      parameters:
+        - name: industry
+          in: query
+          description: Filter by business industry
+          required: false
+          schema:
+            $ref: '#/components/schemas/BusinessIndustry'
+        - name: ruleType
+          in: query
+          description: Filter by loyalty rule type
+          required: false
+          schema:
+            $ref: '#/components/schemas/LoyaltyRuleType'
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of loyalty templates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LoyaltyRuleTemplate'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /loyalty/templates/{templateId}:
+    get:
+      summary: Get loyalty template details
+      operationId: getLoyaltyTemplate
+      tags: [Loyalty]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Loyalty template details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoyaltyRuleTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================
+  # Loyalty Programs Endpoints
+  # ==========================================
+
+  /loyalty/programs:
+    get:
+      summary: List loyalty programs for business
+      operationId: listLoyaltyPrograms
+      tags: [Loyalty]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProgramStatus'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of loyalty programs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LoyaltyProgram'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      summary: Create loyalty program
+      operationId: createLoyaltyProgram
+      tags: [Loyalty]
+      description: |
+        Create a new loyalty program for the authenticated business.
+        Can be created from a template or from scratch.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLoyaltyProgramDto'
+            examples:
+              fromTemplate:
+                summary: Create from template
+                value:
+                  name: Coffee Lover Rewards
+                  templateId: 550e8400-e29b-41d4-a716-446655440000
+                  customizations:
+                    requiredPunches: 8
+              fromScratch:
+                summary: Create from scratch
+                value:
+                  name: Custom Points Program
+                  ruleType: POINTS_BASED
+                  config:
+                    pointsPerDollar: 10
+                    minimumPurchase: 5
+      responses:
+        '201':
+          description: Loyalty program created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoyaltyProgram'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login
+
+  parameters:
+    TemplateId:
+      name: templateId
+      in: path
+      required: true
+      description: Loyalty template ID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # ==========================================
+    # Auth Schemas
+    # ==========================================
+
+    RegisterBusinessDto:
+      type: object
+      required: [email, password, businessName, industry]
+      properties:
+        email:
+          type: string
+          format: email
+          example: owner@coffeeshop.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: SecureP@ss123
+        businessName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: The Coffee House
+        industry:
+          $ref: '#/components/schemas/BusinessIndustry'
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          example: '+1234567890'
+
+    LoginDto:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      required: [accessToken, refreshToken, user, business]
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token (expires in 1 hour)
+        refreshToken:
+          type: string
+          description: Refresh token (expires in 30 days)
+        user:
+          $ref: '#/components/schemas/User'
+        business:
+          $ref: '#/components/schemas/Business'
+
+    User:
+      type: object
+      required: [id, email, firstName, lastName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    # ==========================================
+    # Business Schemas
+    # ==========================================
+
+    Business:
+      type: object
+      required: [id, name, industry, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        industry:
+          $ref: '#/components/schemas/BusinessIndustry'
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED, TRIAL]
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BusinessIndustry:
+      type: string
+      enum:
+        - COFFEE
+        - CAR_WASH
+        - RETAIL
+        - ECOMMERCE
+        - RESTAURANTS
+        - FITNESS
+        - SALON_BEAUTY
+        - HOTEL_HOSPITALITY
+        - COWORKING
+        - BANKING_FINANCE
+        - HEALTHCARE
+        - SUBSCRIPTION_BOX
+        - PROFESSIONAL_SERVICES
+        - PET_SERVICES
+        - EDUCATION
+        - AIRLINES_TRAVEL
+        - SAAS
+        - ENTERTAINMENT
+        - GAMING
+        - STREAMING
+        - OTHER
+      description: |
+        Predefined industries with specialized loyalty templates:
+        - COFFEE: Coffee shops, cafes
+        - CAR_WASH: Auto detailing, car wash
+        - RETAIL: General retail stores
+        - ECOMMERCE: Online shopping
+        - RESTAURANTS: Dining establishments
+        - FITNESS: Gyms, studios
+        - SALON_BEAUTY: Hair salons, beauty services
+        - HOTEL_HOSPITALITY: Hotels, resorts
+        - COWORKING: Shared workspaces
+        - BANKING_FINANCE: Financial services
+        - HEALTHCARE: Medical practices
+        - SUBSCRIPTION_BOX: Recurring subscriptions
+        - PROFESSIONAL_SERVICES: Consulting, legal
+        - PET_SERVICES: Pet grooming, veterinary
+        - EDUCATION: Schools, courses
+        - AIRLINES_TRAVEL: Travel, airlines
+        - SAAS: Software as a Service
+        - ENTERTAINMENT: Theaters, events
+        - GAMING: Game stores, platforms
+        - STREAMING: Media streaming
+        - OTHER: Custom configurations
+
+    # ==========================================
+    # Loyalty Schemas
+    # ==========================================
+
+    LoyaltyRuleTemplate:
+      type: object
+      required: [id, name, industry, ruleType, config, description]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: Coffee Punch Card
+          description: Human-readable template name
+        industry:
+          $ref: '#/components/schemas/BusinessIndustry'
+        ruleType:
+          $ref: '#/components/schemas/LoyaltyRuleType'
+        config:
+          type: object
+          description: Default configuration (industry-specific)
+          example:
+            requiredPunches: 10
+            reward:
+              type: free_item
+              value: Free coffee of any size
+        description:
+          type: string
+          example: Buy 10 coffees, get 1 free
+        estimatedROI:
+          type: string
+          example: 15-25% increase in visit frequency
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    LoyaltyRuleType:
+      type: string
+      enum:
+        - POINTS_BASED
+        - PUNCH_CARD
+        - AMOUNT_SPENT
+        - TIER_BASED
+        - VISIT_FREQUENCY
+        - STAMP_CARD
+      description: |
+        Six flexible loyalty rule types:
+        - POINTS_BASED: Earn points per dollar spent
+        - PUNCH_CARD: Digital stamp cards (buy X, get Y free)
+        - AMOUNT_SPENT: Spend-based milestones
+        - TIER_BASED: Bronze/Silver/Gold tier system
+        - VISIT_FREQUENCY: Visit-based rewards
+        - STAMP_CARD: Item-specific collections
+
+    LoyaltyProgram:
+      type: object
+      required: [id, businessId, name, ruleType, config, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Coffee Rewards Program
+        ruleType:
+          $ref: '#/components/schemas/LoyaltyRuleType'
+        config:
+          type: object
+          description: Program-specific configuration
+        status:
+          $ref: '#/components/schemas/ProgramStatus'
+        templateId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Template this was created from (if applicable)
+        startDate:
+          type: string
+          format: date-time
+          nullable: true
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateLoyaltyProgramDto:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        templateId:
+          type: string
+          format: uuid
+          description: Create from template
+        ruleType:
+          $ref: '#/components/schemas/LoyaltyRuleType'
+          description: Required if not using template
+        config:
+          type: object
+          description: Rule configuration (or customizations if using template)
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+
+    ProgramStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, PAUSED, ENDED]
+      description: |
+        Program lifecycle status:
+        - DRAFT: Not yet launched
+        - ACTIVE: Currently running
+        - PAUSED: Temporarily stopped
+        - ENDED: Permanently ended
+
+    # ==========================================
+    # Common Schemas
+    # ==========================================
+
+    UserRole:
+      type: string
+      enum: [OWNER, ADMIN, STAFF, CUSTOMER]
+
+    PaginationMeta:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 156
+          description: Total number of items
+        totalPages:
+          type: integer
+          example: 8
+          description: Total number of pages
+
+    ErrorResponse:
+      type: object
+      required: [statusCode, message, error]
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Validation failed
+        error:
+          type: string
+          example: Bad Request
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 400
+            message: Validation failed
+            error: Bad Request
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 401
+            message: Unauthorized
+            error: Unauthorized
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 403
+            message: Forbidden resource
+            error: Forbidden
+
+    NotFound:
+      description: Not found - Resource doesn't exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 404
+            message: Resource not found
+            error: Not Found
+
+    Conflict:
+      description: Conflict - Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 409
+            message: Email already registered
+            error: Conflict
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 500
+            message: Internal server error
+            error: Internal Server Error

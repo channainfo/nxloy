@@ -1,0 +1,1051 @@
+asyncapi: 3.0.0
+
+info:
+  title: NxLoy Event Bus
+  version: 1.0.0
+  description: |
+    Domain events for asynchronous, event-driven communication between bounded contexts
+    in the NxLoy loyalty platform.
+
+    **Event Patterns:**
+    - Domain events follow naming convention: `{domain}.{entity}.{action}`
+    - Events are immutable (past tense: "created", "updated", "completed")
+    - Events enable loose coupling between domains
+    - Consumers should be idempotent (handle duplicate events)
+
+    **Domains:**
+    - Loyalty: Loyalty programs, points, tiers
+    - Rewards: Reward catalog, redemptions
+    - Customer: Customer profiles, registration
+    - Transaction: Purchase transactions
+    - Partner: Partner network, integrations
+    - Subscription: Plans, billing, payments
+    - Referral: Referral codes, tracking
+    - Blockchain: NFT minting, token transfers
+
+  contact:
+    name: Ploy Lab
+    url: https://nxloy.com
+  license:
+    name: Proprietary
+
+servers:
+  development:
+    host: localhost:6379
+    protocol: redis
+    description: Local Redis for development
+    variables:
+      port:
+        default: '6379'
+
+  staging:
+    host: redis-staging.nxloy.com:6379
+    protocol: redis
+    description: Staging Redis cluster
+
+  production:
+    host: redis.nxloy.com:6379
+    protocol: redis
+    description: Production Redis cluster (with Sentinel)
+
+channels:
+  # ==========================================
+  # Loyalty Domain Events
+  # ==========================================
+
+  loyalty.points.earned:
+    address: loyalty.points.earned
+    messages:
+      PointsEarnedEvent:
+        $ref: '#/components/messages/PointsEarnedEvent'
+    description: |
+      Published when a customer earns loyalty points.
+
+      **Publishers:** Loyalty service
+      **Subscribers:** Rewards service (check eligibility), Analytics service, Customer notification service
+
+  loyalty.tier.upgraded:
+    address: loyalty.tier.upgraded
+    messages:
+      TierUpgradedEvent:
+        $ref: '#/components/messages/TierUpgradedEvent'
+    description: |
+      Published when a customer's tier is upgraded (Bronze → Silver → Gold → Platinum).
+
+      **Publishers:** Loyalty service
+      **Subscribers:** Customer notification service, Analytics service, Rewards service (unlock tier-specific rewards)
+
+  loyalty.program.created:
+    address: loyalty.program.created
+    messages:
+      ProgramCreatedEvent:
+        $ref: '#/components/messages/ProgramCreatedEvent'
+    description: |
+      Published when a new loyalty program is created.
+
+      **Publishers:** Loyalty service
+      **Subscribers:** Analytics service, Customer service (auto-enroll existing customers)
+
+  # ==========================================
+  # Customer Domain Events
+  # ==========================================
+
+  customer.registered:
+    address: customer.registered
+    messages:
+      CustomerRegisteredEvent:
+        $ref: '#/components/messages/CustomerRegisteredEvent'
+    description: |
+      Published when a new customer registers.
+
+      **Publishers:** Customer service
+      **Subscribers:** Loyalty service (create loyalty account), Referral service (check referral code), Email service (welcome email)
+
+  customer.profile.updated:
+    address: customer.profile.updated
+    messages:
+      CustomerProfileUpdatedEvent:
+        $ref: '#/components/messages/CustomerProfileUpdatedEvent'
+    description: |
+      Published when customer updates their profile.
+
+      **Publishers:** Customer service
+      **Subscribers:** Analytics service, AI/MCP service (update personalization)
+
+  # ==========================================
+  # Transaction Domain Events
+  # ==========================================
+
+  transaction.completed:
+    address: transaction.completed
+    messages:
+      TransactionCompletedEvent:
+        $ref: '#/components/messages/TransactionCompletedEvent'
+    description: |
+      Published when a purchase transaction is completed.
+
+      **Publishers:** Transaction service
+      **Subscribers:** Loyalty service (calculate points), Analytics service, Partner service (partner rewards)
+
+  # ==========================================
+  # Rewards Domain Events
+  # ==========================================
+
+  rewards.redeemed:
+    address: rewards.redeemed
+    messages:
+      RewardRedeemedEvent:
+        $ref: '#/components/messages/RewardRedeemedEvent'
+    description: |
+      Published when a customer redeems a reward.
+
+      **Publishers:** Rewards service
+      **Subscribers:** Loyalty service (deduct points), Inventory service (update stock), Customer notification service
+
+  rewards.catalog.updated:
+    address: rewards.catalog.updated
+    messages:
+      CatalogUpdatedEvent:
+        $ref: '#/components/messages/CatalogUpdatedEvent'
+    description: |
+      Published when reward catalog is updated (new items, price changes).
+
+      **Publishers:** Rewards service
+      **Subscribers:** Customer notification service (notify about new rewards), AI/MCP (update recommendations)
+
+  # ==========================================
+  # Partner Domain Events
+  # ==========================================
+
+  partner.linked:
+    address: partner.linked
+    messages:
+      PartnerLinkedEvent:
+        $ref: '#/components/messages/PartnerLinkedEvent'
+    description: |
+      Published when a customer links their account to a partner program.
+
+      **Publishers:** Partner service
+      **Subscribers:** Customer service (update profile), Analytics service
+
+  partner.reward.earned:
+    address: partner.reward.earned
+    messages:
+      PartnerRewardEarnedEvent:
+        $ref: '#/components/messages/PartnerRewardEarnedEvent'
+    description: |
+      Published when a customer earns rewards from partner transactions.
+
+      **Publishers:** Partner service
+      **Subscribers:** Loyalty service (credit points), Customer notification service
+
+  # ==========================================
+  # Subscription Domain Events
+  # ==========================================
+
+  subscription.created:
+    address: subscription.created
+    messages:
+      SubscriptionCreatedEvent:
+        $ref: '#/components/messages/SubscriptionCreatedEvent'
+    description: |
+      Published when a new subscription is created.
+
+      **Publishers:** Subscription service
+      **Subscribers:** Loyalty service (grant tier benefits), Analytics service
+
+  subscription.payment.succeeded:
+    address: subscription.payment.succeeded
+    messages:
+      PaymentSucceededEvent:
+        $ref: '#/components/messages/PaymentSucceededEvent'
+    description: |
+      Published when subscription payment is successful.
+
+      **Publishers:** Subscription service
+      **Subscribers:** Analytics service, Email service (send receipt)
+
+  subscription.payment.failed:
+    address: subscription.payment.failed
+    messages:
+      PaymentFailedEvent:
+        $ref: '#/components/messages/PaymentFailedEvent'
+    description: |
+      Published when subscription payment fails.
+
+      **Publishers:** Subscription service
+      **Subscribers:** Customer notification service (payment retry reminder), Analytics service
+
+  # ==========================================
+  # Referral Domain Events
+  # ==========================================
+
+  referral.completed:
+    address: referral.completed
+    messages:
+      ReferralCompletedEvent:
+        $ref: '#/components/messages/ReferralCompletedEvent'
+    description: |
+      Published when a referred customer completes the required action (purchase, signup).
+
+      **Publishers:** Referral service
+      **Subscribers:** Loyalty service (grant referral rewards), Customer notification service
+
+  # ==========================================
+  # Blockchain Domain Events
+  # ==========================================
+
+  blockchain.nft.minted:
+    address: blockchain.nft.minted
+    messages:
+      NFTMintedEvent:
+        $ref: '#/components/messages/NFTMintedEvent'
+    description: |
+      Published when an NFT reward is minted for a customer.
+
+      **Publishers:** Blockchain service
+      **Subscribers:** Rewards service (mark as issued), Customer notification service, Analytics service
+
+  blockchain.token.transferred:
+    address: blockchain.token.transferred
+    messages:
+      TokenTransferredEvent:
+        $ref: '#/components/messages/TokenTransferredEvent'
+    description: |
+      Published when tokens are transferred (customer-to-customer or redemption).
+
+      **Publishers:** Blockchain service
+      **Subscribers:** Rewards service (track transfers), Analytics service
+
+operations:
+  # ==========================================
+  # Loyalty Operations
+  # ==========================================
+
+  publishPointsEarned:
+    action: send
+    channel:
+      $ref: '#/channels/loyalty.points.earned'
+    summary: Publish points earned event
+    messages:
+      - $ref: '#/channels/loyalty.points.earned/messages/PointsEarnedEvent'
+
+  subscribePointsEarned:
+    action: receive
+    channel:
+      $ref: '#/channels/loyalty.points.earned'
+    summary: Subscribe to points earned events
+    messages:
+      - $ref: '#/channels/loyalty.points.earned/messages/PointsEarnedEvent'
+
+  publishTierUpgraded:
+    action: send
+    channel:
+      $ref: '#/channels/loyalty.tier.upgraded'
+    summary: Publish tier upgraded event
+
+  # ==========================================
+  # Customer Operations
+  # ==========================================
+
+  publishCustomerRegistered:
+    action: send
+    channel:
+      $ref: '#/channels/customer.registered'
+    summary: Publish customer registered event
+
+  subscribeCustomerRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/customer.registered'
+    summary: Subscribe to customer registered events
+
+  # ==========================================
+  # Transaction Operations
+  # ==========================================
+
+  publishTransactionCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/transaction.completed'
+    summary: Publish transaction completed event
+
+  subscribeTransactionCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/transaction.completed'
+    summary: Subscribe to transaction completed events
+
+components:
+  messages:
+    # ==========================================
+    # Loyalty Messages
+    # ==========================================
+
+    PointsEarnedEvent:
+      name: PointsEarnedEvent
+      title: Points Earned
+      summary: Customer earned loyalty points
+      contentType: application/json
+      tags:
+        - name: loyalty
+        - name: points
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - points
+          - programId
+        properties:
+          eventId:
+            type: string
+            format: uuid
+            description: Unique event identifier (for idempotency)
+          eventType:
+            type: string
+            const: loyalty.points.earned
+          timestamp:
+            type: string
+            format: date-time
+            description: When the event occurred
+          businessId:
+            type: string
+            format: uuid
+            description: Business (tenant) identifier
+          customerId:
+            type: string
+            format: uuid
+            description: Customer who earned points
+          points:
+            type: number
+            minimum: 0
+            description: Number of points earned
+          programId:
+            type: string
+            format: uuid
+            description: Loyalty program identifier
+          transactionId:
+            type: string
+            format: uuid
+            description: Related transaction (if applicable)
+            nullable: true
+          multiplier:
+            type: number
+            minimum: 1
+            default: 1
+            description: Points multiplier (e.g., 2x bonus)
+          reason:
+            type: string
+            description: Why points were earned
+            example: Purchase transaction
+          metadata:
+            type: object
+            description: Additional context (extensible)
+            additionalProperties: true
+
+    TierUpgradedEvent:
+      name: TierUpgradedEvent
+      title: Tier Upgraded
+      summary: Customer's tier was upgraded
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - programId
+          - previousTier
+          - newTier
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: loyalty.tier.upgraded
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          programId:
+            type: string
+            format: uuid
+          previousTier:
+            type: string
+            enum: [BRONZE, SILVER, GOLD, PLATINUM]
+          newTier:
+            type: string
+            enum: [BRONZE, SILVER, GOLD, PLATINUM]
+          totalPoints:
+            type: number
+            description: Total points at time of upgrade
+
+    ProgramCreatedEvent:
+      name: ProgramCreatedEvent
+      title: Program Created
+      summary: New loyalty program created
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - programId
+          - programName
+          - ruleType
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: loyalty.program.created
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          programId:
+            type: string
+            format: uuid
+          programName:
+            type: string
+          ruleType:
+            type: string
+            enum:
+              - POINTS_BASED
+              - PUNCH_CARD
+              - AMOUNT_SPENT
+              - TIER_BASED
+              - VISIT_FREQUENCY
+              - STAMP_CARD
+
+    # ==========================================
+    # Customer Messages
+    # ==========================================
+
+    CustomerRegisteredEvent:
+      name: CustomerRegisteredEvent
+      title: Customer Registered
+      summary: New customer registered
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - email
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: customer.registered
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          email:
+            type: string
+            format: email
+          firstName:
+            type: string
+            nullable: true
+          lastName:
+            type: string
+            nullable: true
+          phone:
+            type: string
+            nullable: true
+          referralCode:
+            type: string
+            description: Referral code used during registration
+            nullable: true
+          source:
+            type: string
+            enum: [WEB, MOBILE, POS, API]
+            description: Registration source
+
+    CustomerProfileUpdatedEvent:
+      name: CustomerProfileUpdatedEvent
+      title: Customer Profile Updated
+      summary: Customer updated their profile
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - updatedFields
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: customer.profile.updated
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          updatedFields:
+            type: array
+            items:
+              type: string
+            example: [email, phone, preferences]
+
+    # ==========================================
+    # Transaction Messages
+    # ==========================================
+
+    TransactionCompletedEvent:
+      name: TransactionCompletedEvent
+      title: Transaction Completed
+      summary: Purchase transaction completed
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - transactionId
+          - amount
+          - currency
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: transaction.completed
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          transactionId:
+            type: string
+            format: uuid
+          amount:
+            type: number
+            minimum: 0
+            description: Transaction amount
+          currency:
+            type: string
+            pattern: '^[A-Z]{3}$'
+            example: USD
+          items:
+            type: array
+            items:
+              type: object
+              properties:
+                productId:
+                  type: string
+                name:
+                  type: string
+                quantity:
+                  type: number
+                price:
+                  type: number
+          paymentMethod:
+            type: string
+            enum: [CASH, CARD, MOBILE, POINTS]
+
+    # ==========================================
+    # Rewards Messages
+    # ==========================================
+
+    RewardRedeemedEvent:
+      name: RewardRedeemedEvent
+      title: Reward Redeemed
+      summary: Customer redeemed a reward
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - rewardId
+          - pointsCost
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: rewards.redeemed
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          rewardId:
+            type: string
+            format: uuid
+          pointsCost:
+            type: number
+            minimum: 0
+          redemptionId:
+            type: string
+            format: uuid
+
+    CatalogUpdatedEvent:
+      name: CatalogUpdatedEvent
+      title: Catalog Updated
+      summary: Reward catalog updated
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - changeType
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: rewards.catalog.updated
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          changeType:
+            type: string
+            enum: [ITEM_ADDED, ITEM_REMOVED, PRICE_CHANGED, STOCK_UPDATED]
+          rewardIds:
+            type: array
+            items:
+              type: string
+              format: uuid
+
+    # ==========================================
+    # Partner Messages
+    # ==========================================
+
+    PartnerLinkedEvent:
+      name: PartnerLinkedEvent
+      title: Partner Linked
+      summary: Customer linked partner account
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - partnerId
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: partner.linked
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          partnerId:
+            type: string
+            format: uuid
+          partnerCustomerId:
+            type: string
+            description: Customer ID in partner system
+
+    PartnerRewardEarnedEvent:
+      name: PartnerRewardEarnedEvent
+      title: Partner Reward Earned
+      summary: Customer earned rewards from partner
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - partnerId
+          - points
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: partner.reward.earned
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          partnerId:
+            type: string
+            format: uuid
+          points:
+            type: number
+            minimum: 0
+          partnerTransactionId:
+            type: string
+
+    # ==========================================
+    # Subscription Messages
+    # ==========================================
+
+    SubscriptionCreatedEvent:
+      name: SubscriptionCreatedEvent
+      title: Subscription Created
+      summary: New subscription created
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - subscriptionId
+          - planId
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: subscription.created
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          subscriptionId:
+            type: string
+            format: uuid
+          planId:
+            type: string
+            format: uuid
+          tier:
+            type: string
+            enum: [BASIC, PREMIUM, ENTERPRISE]
+
+    PaymentSucceededEvent:
+      name: PaymentSucceededEvent
+      title: Payment Succeeded
+      summary: Subscription payment succeeded
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - subscriptionId
+          - amount
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: subscription.payment.succeeded
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          subscriptionId:
+            type: string
+            format: uuid
+          amount:
+            type: number
+          currency:
+            type: string
+
+    PaymentFailedEvent:
+      name: PaymentFailedEvent
+      title: Payment Failed
+      summary: Subscription payment failed
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - subscriptionId
+          - reason
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: subscription.payment.failed
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          subscriptionId:
+            type: string
+            format: uuid
+          reason:
+            type: string
+            example: insufficient_funds
+          retryCount:
+            type: integer
+
+    # ==========================================
+    # Referral Messages
+    # ==========================================
+
+    ReferralCompletedEvent:
+      name: ReferralCompletedEvent
+      title: Referral Completed
+      summary: Referred customer completed required action
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - referrerId
+          - referredCustomerId
+          - referralCode
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: referral.completed
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          referrerId:
+            type: string
+            format: uuid
+            description: Customer who made the referral
+          referredCustomerId:
+            type: string
+            format: uuid
+            description: Customer who was referred
+          referralCode:
+            type: string
+          rewardPoints:
+            type: number
+            description: Points to award referrer
+
+    # ==========================================
+    # Blockchain Messages
+    # ==========================================
+
+    NFTMintedEvent:
+      name: NFTMintedEvent
+      title: NFT Minted
+      summary: NFT reward minted for customer
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - customerId
+          - tokenId
+          - contractAddress
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: blockchain.nft.minted
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          tokenId:
+            type: string
+            description: NFT token identifier
+          contractAddress:
+            type: string
+            description: Smart contract address
+          chain:
+            type: string
+            enum: [ETHEREUM, POLYGON, BASE, SOLANA, SUI]
+          metadata:
+            type: object
+            description: NFT metadata
+
+    TokenTransferredEvent:
+      name: TokenTransferredEvent
+      title: Token Transferred
+      summary: Tokens transferred between addresses
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - timestamp
+          - businessId
+          - fromAddress
+          - toAddress
+          - amount
+          - transactionHash
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            const: blockchain.token.transferred
+          timestamp:
+            type: string
+            format: date-time
+          businessId:
+            type: string
+            format: uuid
+          fromAddress:
+            type: string
+          toAddress:
+            type: string
+          amount:
+            type: number
+          tokenType:
+            type: string
+            description: Token standard (ERC20, ERC721, etc.)
+          transactionHash:
+            type: string

@@ -4,12 +4,20 @@
 [![Node](https://img.shields.io/badge/node-%3E%3D22.12.0-brightgreen.svg)](package.json)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D10.14.0-orange.svg)](package.json)
 [![Prisma](https://img.shields.io/badge/prisma-%3E%3D6.7.0-blue.svg)](packages/database)
+[![Documentation](https://img.shields.io/badge/docs-v2.0.0-blue.svg)](docs/requirements/)
 
-Modern multi-tenant loyalty platform supporting 21 industries with white-label capabilities.
+Modern multi-tenant loyalty platform with **unified wallet**, **viral growth mechanics**, and **social community features** supporting 21 industries.
 
 ## 🚧 Status
 
-**Active Development** | Version 0.1.0 | Not production-ready
+**Active Development** | Version 0.1.0 | Documentation v2.0.0 | Not production-ready
+
+**Latest Documentation Updates (v2.0.0)**:
+- ✅ Unified Wallet features (store credit, digital rewards, multi-tender redemption)
+- ✅ Viral Growth Suite (UGC, challenges, influencer network, analytics)
+- ✅ Social & Community features (social feed, group challenges, influencer programs)
+- ✅ Content Management (A/B testing, personalization, multi-language)
+- ✅ 21 comprehensive feature specifications (100% coverage)
 
 ### Implementation Status Legend
 
@@ -148,12 +156,19 @@ If all commands succeed, you're ready to develop! 🎉
 
 **👉 Start Here**: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-### 🏗️ Architecture
+### 🏗️ Architecture & Design
 - [Overview](docs/architecture/overview.md) - High-level architecture
 - [Principles](docs/architecture/principles.md) - Core architectural principles
 - [Domain Structure](docs/architecture/domains.md) - 8 bounded contexts
 - [Tech Stack](docs/architecture/tech-stack.md) - Technology choices
 - [Data Architecture](docs/architecture/data-architecture.md) - Database design
+
+**Key Features (v2.0.0)**:
+- **Unified Wallet**: Multi-tender redemption (points + store credit + digital rewards + cash)
+- **Viral Growth**: K-factor tracking, UGC automation, influencer matching, viral challenges
+- **Social Community**: Social feed, group challenges, UGC rewards, influencer programs
+- **Multi-Currency**: 8 ASEAN currencies (USD, KHR, SGD, THB, VND, MYR, PHP, IDR)
+- **FIFO Redemption**: Earliest expiration first, automatic balance optimization
 
 **👉 Start Here**: [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -161,11 +176,32 @@ If all commands succeed, you're ready to develop! 🎉
 - [Multi-Agent Development](docs/guides/multi-agent-workflow.md) - Parallel AI development
 - [Git Worktree Workflow](docs/guides/worktree-workflow.md) - Worktree best practices
 
-### 📋 Project Management
-- [Feature Specifications](docs/requirements/features/) - Detailed feature specs
-- [Domain Specifications](docs/requirements/domain-specs/) - Domain-driven design
-- [Integration Guides](docs/requirements/integration-guides/) - API & deployment
-- [Market Analysis](docs/requirements/analysis/) - Competitive research
+### 📋 Project Management & Requirements (v2.0.0)
+
+**Business Requirements**:
+- [Business Requirements](docs/requirements/BUSINESS-REQUIREMENTS.md) - Complete business requirements (v2.0.0)
+- [Product Roadmap](docs/requirements/PRODUCT-ROADMAP.md) - 18-month phased roadmap (v2.0.0)
+- [Use Cases & Success Stories](docs/requirements/USE-CASES.md) - Real-world applications (v2.0.0)
+- [Terminology Reference](docs/requirements/TERMINOLOGY.md) - Ubiquitous language (v2.0.0)
+
+**Feature Specifications** (21 Features - 100% Coverage):
+- [Feature Documentation Guide](docs/requirements/features/) - All feature specs organized by phase
+- **Phase 1**: Unified Wallet (store credit, digital rewards, multi-tender)
+- **Phase 2-3**: Viral Growth Suite ([overview](docs/requirements/features/viral-growth/SUITE-OVERVIEW.md), [roadmap](docs/requirements/features/viral-growth/IMPLEMENTATION-ROADMAP.md))
+  - UGC & AI Content Automation
+  - Viral Challenges Builder
+  - Influencer Network & Matching
+  - Viral Analytics & Growth
+- **Phase 5**: Social & Community Features
+- **Phase 4-5**: Advanced Features (AI, Blockchain, Gamification, Sustainability, Voice, Finance)
+
+**Domain Specifications**:
+- [Domain Specifications](docs/requirements/domain-specs/) - Domain-driven design (8 bounded contexts)
+
+**Integration & Deployment**:
+- [Integration Guides](docs/requirements/integration-guides/) - API, deployment, testing, monitoring
+
+**Architecture Decisions**:
 - [ADRs](docs/adr/) - Architecture Decision Records
 
 ## 🛠️ Technology Stack
@@ -200,7 +236,25 @@ Built with [Nx](https://nx.dev/), [NestJS](https://nestjs.com/), [Next.js](https
 
 ---
 
-**Last Updated**: 2025-11-08
+## 📊 Documentation Coverage (v2.0.0)
+
+- ✅ **Business Requirements**: Complete with wallet, viral growth, social, content features
+- ✅ **Product Roadmap**: 5 phases, 18 months, fully updated
+- ✅ **Feature Specifications**: 21/21 features (100% FEATURE-SPEC coverage)
+- ✅ **Use Cases**: 8 comprehensive use cases with ROI calculations
+- ✅ **Terminology**: 800+ terms covering wallet, viral, social, content domains
+- ✅ **Domain Specifications**: 8 bounded contexts fully documented
+- ✅ **Integration Guides**: API, deployment, testing, monitoring complete
+
+**Next Milestones**:
+- 🚧 Backend implementation (CONTRACTS, BACKEND docs)
+- 🚧 Frontend implementation (WEB, MOBILE docs)
+- 📋 Infrastructure deployment (INFRASTRUCTURE docs)
+
+---
+
+**Version**: 0.1.0 (Code) | v2.0.0 (Documentation)
+**Last Updated**: 2025-11-09
 **Maintained By**: NxPloy
 **Project Status**: Active Development (Pre-Alpha)
 

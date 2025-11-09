@@ -1,6 +1,13 @@
 # Feature Documentation Guide
 
-**Last Updated**: 2025-11-06
+**Version**: 2.0.0
+**Last Updated**: 2025-11-09
+
+**v2.0.0 Updates**:
+- Added Unified Wallet features (store credit, digital rewards, multi-tender redemption)
+- Added Viral Growth Suite (UGC, Challenges, Influencer Network, Analytics)
+- Added Social & Community features (Phase 5)
+- Reorganized viral growth documentation into dedicated meta-directory
 
 
 ## Overview
@@ -91,6 +98,8 @@ The `loyalty-templates/` directory contains the **master reference implementatio
 
 ## Feature Status Matrix
 
+### Core Features (Phase 1-2)
+
 | Feature | FEATURE-SPEC | CONTRACTS | BACKEND | WEB | MOBILE | AI-MCP | BLOCKCHAIN | INFRASTRUCTURE | ACCEPTANCE |
 |---------|--------------|-----------|---------|-----|--------|--------|------------|----------------|------------|
 | **Loyalty Templates** | ✅ 611 lines | ✅ 446 lines | ✅ 754 lines | ✅ 192 lines | ✅ 177 lines | ✅ 123 lines | ✅ 157 lines | ✅ 242 lines | ✅ 213 lines |
@@ -99,6 +108,45 @@ The `loyalty-templates/` directory contains the **master reference implementatio
 | **Customer Management** | ✅ 957 lines | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template |
 | **Partner Network** | ✅ 858 lines | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template |
 | **Subscription Management** | ✅ 987 lines | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template |
+| **Referrals** | ✅ Complete | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template | 📝 See template |
+
+### NEW v2.0.0: Unified Wallet (Phase 1)
+
+| Feature | FEATURE-SPEC | CONTRACTS | BACKEND | WEB | MOBILE | AI-MCP | BLOCKCHAIN | INFRASTRUCTURE | ACCEPTANCE |
+|---------|--------------|-----------|---------|-----|--------|--------|------------|----------------|------------|
+| **Unified Wallet** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending |
+| **Store Credit** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | N/A | N/A | 📝 Pending | 📝 Pending |
+| **Gift Cards** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | N/A | N/A | 📝 Pending | 📝 Pending |
+
+### NEW v2.0.0: Viral Growth Suite (Phase 2-3)
+
+| Feature | FEATURE-SPEC | CONTRACTS | BACKEND | WEB | MOBILE | AI-MCP | BLOCKCHAIN | INFRASTRUCTURE | ACCEPTANCE |
+|---------|--------------|-----------|---------|-----|--------|--------|------------|----------------|------------|
+| **UGC & AI Content** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | N/A | 📝 Pending | 📝 Pending |
+| **Viral Challenges** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | N/A | 📝 Pending | 📝 Pending |
+| **Influencer Network** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | N/A | 📝 Pending | 📝 Pending |
+| **Viral Analytics** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | N/A | 📝 Pending | 📝 Pending |
+
+**Viral Growth Meta-Documentation**:
+- 📚 [Suite Overview](./viral-growth/SUITE-OVERVIEW.md) - Integrated viral growth architecture
+- 🗺️ [Implementation Roadmap](./viral-growth/IMPLEMENTATION-ROADMAP.md) - 9-month rollout plan
+
+### NEW v2.0.0: Social & Community (Phase 5)
+
+| Feature | FEATURE-SPEC | CONTRACTS | BACKEND | WEB | MOBILE | AI-MCP | BLOCKCHAIN | INFRASTRUCTURE | ACCEPTANCE |
+|---------|--------------|-----------|---------|-----|--------|--------|------------|----------------|------------|
+| **Social Community** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending |
+
+### Advanced Features (Phase 4-5)
+
+| Feature | FEATURE-SPEC | CONTRACTS | BACKEND | WEB | MOBILE | AI-MCP | BLOCKCHAIN | INFRASTRUCTURE | ACCEPTANCE |
+|---------|--------------|-----------|---------|-----|--------|--------|------------|----------------|------------|
+| **Blockchain/NFTs** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | N/A | ✅ Complete | 📝 Pending | 📝 Pending |
+| **AI Personalization** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | N/A | 📝 Pending | 📝 Pending |
+| **Advanced Gamification** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | N/A | 📝 Pending | 📝 Pending |
+| **Sustainability/ESG** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | ✅ Complete | 📝 Pending | 📝 Pending |
+| **Voice Assistant** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | N/A | 📝 Pending | 📝 Pending |
+| **Embedded Finance** | ✅ Complete | 📝 Pending | 📝 Pending | 📝 Pending | 📝 Pending | ✅ Complete | N/A | 📝 Pending | 📝 Pending |
 
 **Legend**:
 - ✅ Complete with full content
@@ -229,25 +277,25 @@ If documentation falls behind code:
 
 ## Metrics
 
-### Documentation Coverage
+### Documentation Coverage (v2.0.0)
 
-- **FEATURE-SPEC**: 6/6 (100%) ✅
-- **CONTRACTS**: 1/6 (17%) - Use Loyalty Templates as reference
-- **BACKEND**: 1/6 (17%) - Use Loyalty Templates as reference  
-- **WEB**: 1/6 (17%) - Use Loyalty Templates as reference
-- **MOBILE**: 1/6 (17%) - Use Loyalty Templates as reference
-- **AI-MCP**: 1/6 (17%) - Use Loyalty Templates as reference
-- **BLOCKCHAIN**: 1/6 (17%) - Use Loyalty Templates as reference
-- **INFRASTRUCTURE**: 1/6 (17%) - Use Loyalty Templates as reference
-- **ACCEPTANCE**: 1/6 (17%) - Use Loyalty Templates as reference
+**Core Features (Phase 1-2)**:
+- **FEATURE-SPEC**: 7/7 (100%) ✅
+- **Implementation Docs**: 1/7 (14%) - Use Loyalty Templates as reference
 
-**Overall Completion**: ~28% (9 complete files out of 54 total)
+**NEW v2.0.0 Features**:
+- **Unified Wallet**: FEATURE-SPEC complete (3/3)
+- **Viral Growth Suite**: FEATURE-SPEC + AI-MCP complete (4/4)
+- **Social & Community**: FEATURE-SPEC + AI-MCP complete (1/1)
+- **Advanced Features**: FEATURE-SPEC complete (6/6)
 
-**Status**: ✅ All critical documentation (FEATURE-SPEC + reference templates) complete. Teams can proceed with implementation using Loyalty Templates as the master reference.
+**Total FEATURE-SPEC Coverage**: 21/21 (100%) ✅
+
+**Overall Status**: ✅ All critical documentation (FEATURE-SPEC + reference templates) complete. Teams can proceed with implementation using Loyalty Templates as the master reference.
 
 ## Quick Links
 
-### Completed Documentation
+### Master Reference Template
 - [Loyalty Templates (COMPLETE)](./loyalty-templates/) - Master reference for all other features
   - [FEATURE-SPEC.md](./loyalty-templates/FEATURE-SPEC.md)
   - [CONTRACTS.md](./loyalty-templates/CONTRACTS.md)
@@ -259,12 +307,37 @@ If documentation falls behind code:
   - [INFRASTRUCTURE.md](./loyalty-templates/INFRASTRUCTURE.md)
   - [ACCEPTANCE.feature](./loyalty-templates/ACCEPTANCE.feature)
 
-### Feature Specifications (Complete)
-- [Loyalty Programs - FEATURE-SPEC.md](./loyalty-programs/FEATURE-SPEC.md)
-- [Reward Catalog - FEATURE-SPEC.md](./reward-catalog/FEATURE-SPEC.md)
-- [Customer Management - FEATURE-SPEC.md](./customer-management/FEATURE-SPEC.md)
-- [Partner Network - FEATURE-SPEC.md](./partner-network/FEATURE-SPEC.md)
-- [Subscription Management - FEATURE-SPEC.md](./subscription-management/FEATURE-SPEC.md)
+### Core Feature Specifications
+- [Loyalty Programs](./loyalty-programs/FEATURE-SPEC.md)
+- [Reward Catalog](./reward-catalog/FEATURE-SPEC.md)
+- [Customer Management](./customer-management/FEATURE-SPEC.md)
+- [Partner Network](./partner-network/FEATURE-SPEC.md)
+- [Subscription Management](./subscription-management/FEATURE-SPEC.md)
+- [Referrals](./referrals/FEATURE-SPEC.md)
+
+### NEW v2.0.0: Unified Wallet (Phase 1)
+- [Unified Wallet Overview](./unified-wallet/FEATURE-SPEC.md) - Multi-tender redemption architecture
+- [Store Credit](./store-credit/FEATURE-SPEC.md) - Monetary loyalty credits with FIFO redemption
+- [Gift Cards](./gift-cards/FEATURE-SPEC.md) - Digital rewards as loyalty benefits
+
+### NEW v2.0.0: Viral Growth Suite (Phase 2-3)
+- 📚 **[Suite Overview](./viral-growth/SUITE-OVERVIEW.md)** - Integrated viral growth architecture & revenue model
+- 🗺️ **[Implementation Roadmap](./viral-growth/IMPLEMENTATION-ROADMAP.md)** - 9-month priority & sequencing plan
+- [UGC & AI Content Automation](./ugc-ai-content/FEATURE-SPEC.md) - Customer content with AI quality scoring
+- [Viral Challenges Builder](./viral-challenges/FEATURE-SPEC.md) - TikTok/Instagram challenges with AI trends
+- [Influencer Network & Matching](./influencer-network/FEATURE-SPEC.md) - AI-powered micro-influencer discovery
+- [Viral Analytics & Growth](./viral-analytics/FEATURE-SPEC.md) - K-factor tracking & super referrer identification
+
+### NEW v2.0.0: Social & Community (Phase 5)
+- [Social Community](./social-community/FEATURE-SPEC.md) - Social feed, group challenges, UGC, influencer programs
+
+### Advanced Features (Phase 4-5)
+- [Blockchain/NFTs](./blockchain/FEATURE-SPEC.md) - NFT rewards and token-based programs
+- [AI Personalization](./ai-personalization/FEATURE-SPEC.md) - ML-based recommendations and churn prediction
+- [Advanced Gamification](./advanced-gamification/FEATURE-SPEC.md) - Battle passes, quests, loot boxes
+- [Sustainability/ESG](./sustainability/FEATURE-SPEC.md) - Carbon tracking and eco-rewards
+- [Voice Assistant](./voice-assistant/FEATURE-SPEC.md) - Alexa, Google Assistant, Siri integration
+- [Embedded Finance](./embedded-finance/FEATURE-SPEC.md) - Hybrid payments, BNPL, P2P transfers
 
 ### Related Documentation
 - [Documentation Status](../DOCUMENTATION-STATUS.md)
@@ -286,6 +359,17 @@ For questions or issues with documentation:
 
 ---
 
-**Document Owner**: Documentation Team  
-**Last Updated**: 2025-11-06  
-**Next Review**: 2025-12-06
+---
+
+## Change Log
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2025-11-09 | 2.0.0 | Added Unified Wallet (3 features), Viral Growth Suite (4 features + meta-docs), Social & Community, reorganized viral growth docs |
+| 2025-11-06 | 1.0.0 | Initial feature documentation structure with 6 core features |
+
+---
+
+**Document Owner**: Documentation Team
+**Last Updated**: 2025-11-09
+**Next Review**: 2025-12-09

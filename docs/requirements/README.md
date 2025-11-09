@@ -7,6 +7,8 @@ This directory contains business requirements and specifications for the NxLoy l
 NxLoy aims to be the **most flexible and developer-friendly loyalty platform** that supports:
 - Custom workflows per industry
 - Multi-tenancy and white-label capabilities
+- **Unified wallet with multi-tender redemption** (NEW v2.0.0)
+- **Viral growth mechanics and social features** (NEW v2.0.0)
 - AI-powered recommendations
 - Blockchain-based digital rewards
 - Seamless omnichannel experiences
@@ -177,6 +179,8 @@ NxLoy aims to be the **most flexible and developer-friendly loyalty platform** t
 - Redemption tracking
 - Redemption limits (per customer, per time period)
 - Partial redemption support
+- **Multi-tender redemption** (NEW v2.0.0): Combine points + store credit + digital rewards + cash
+- **FIFO redemption logic** (NEW v2.0.0): Earliest expiring balance used first
 
 ### 8. Analytics & Reporting
 
@@ -188,6 +192,10 @@ NxLoy aims to be the **most flexible and developer-friendly loyalty platform** t
 - Engagement analytics
 - Revenue attribution
 - Export capabilities (CSV, PDF)
+- **Wallet analytics** (NEW v2.0.0): Breakage revenue, multi-tender usage, FIFO efficiency
+- **Viral growth analytics** (NEW v2.0.0): K-factor, referral conversion, viral loops
+- **Content performance** (NEW v2.0.0): Template usage, A/B test results
+- **Social engagement metrics** (NEW v2.0.0): UGC volume, challenge participation, influencer ROI
 
 ### 9. Integrations
 
@@ -267,6 +275,7 @@ NxLoy aims to be the **most flexible and developer-friendly loyalty platform** t
 - [ ] 5 industry templates
 - [ ] 3 loyalty rule types (points, punch card, amount spent)
 - [ ] PostgreSQL + Redis setup
+- [ ] **Unified Wallet** (NEW v2.0.0): Store credit, digital rewards, multi-tender redemption
 
 ### Phase 2: Enhanced Features (Months 4-6)
 - [ ] Remaining 16 industry templates
@@ -274,6 +283,8 @@ NxLoy aims to be the **most flexible and developer-friendly loyalty platform** t
 - [ ] Mobile app (React Native)
 - [ ] Advanced analytics
 - [ ] Email/SMS notifications
+- [ ] **Content Management** (NEW v2.0.0): Template library, A/B testing, personalization
+- [ ] **Viral Growth - Phase 1** (NEW v2.0.0): Referral tracking, dual-sided rewards, share buttons
 
 ### Phase 3: AI & Automation (Months 7-9)
 - [ ] AI/MCP server
@@ -281,6 +292,7 @@ NxLoy aims to be the **most flexible and developer-friendly loyalty platform** t
 - [ ] Churn prediction
 - [ ] Workflow automation engine
 - [ ] Visual workflow builder
+- [ ] **Viral Growth - Phase 2** (NEW v2.0.0): Advanced viral mechanics, gamification, challenges
 
 ### Phase 4: Blockchain (Months 10-12)
 - [ ] NFT reward system
@@ -288,7 +300,10 @@ NxLoy aims to be the **most flexible and developer-friendly loyalty platform** t
 - [ ] Wallet integration
 - [ ] Multi-chain support
 
-### Phase 5: Enterprise (Year 2)
+### Phase 5: Social & Community + Enterprise (Year 2) **(UPDATED v2.0.0)**
+- [ ] **Social Feed & Sharing** (NEW v2.0.0): Instagram-style feed, UGC, reactions
+- [ ] **Group Challenges** (NEW v2.0.0): Team competitions, leaderboards, shared rewards
+- [ ] **Influencer Programs** (NEW v2.0.0): Micro-influencer partnerships, brand ambassadors
 - [ ] SOC 2 Type II certification
 - [ ] Advanced RBAC
 - [ ] Audit logs

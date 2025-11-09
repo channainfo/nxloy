@@ -1,0 +1,258 @@
+// User-Generated Content (UGC) Domain
+// Models: UGCSubmission, UGCModeration, UGCReport
+//
+// Purpose: Enable viral customer-generated content with AI-powered quality scoring
+// and automated reward distribution. Supports photos, videos, and text reviews
+// across multiple platforms (Instagram, TikTok, direct upload).
+
+// ============================================================================
+// UGC SUBMISSIONS
+// ============================================================================
+
+enum UGCContentType {
+  PHOTO          // Single image
+  VIDEO          // Short-form video
+  TEXT_REVIEW    // Written review
+  PHOTO_REVIEW   // Review with photo
+  VIDEO_REVIEW   // Review with video
+}
+
+enum UGCPlatform {
+  DIRECT_UPLOAD  // Uploaded via NxLoy app/web
+  INSTAGRAM      // Tagged post on Instagram
+  TIKTOK         // Tagged video on TikTok
+  FACEBOOK       // Facebook post
+  TWITTER        // Twitter/X post
+  YOUTUBE        // YouTube video
+}
+
+enum UGCStatus {
+  PENDING        // Awaiting moderation
+  APPROVED       // Passed moderation, visible
+  REJECTED       // Failed moderation
+  FLAGGED        // Flagged for human review
+  REMOVED        // Removed by admin/user
+}
+
+model UGCSubmission {
+  id          String         @id @default(cuid())
+
+  // Multi-tenant & customer
+  businessId  String         // Which business this UGC belongs to
+  customerId  String         // Which customer created this
+
+  // Content metadata
+  contentType UGCContentType
+  platform    UGCPlatform
+  contentUrl  String         // S3/CDN URL for uploaded content
+  thumbnailUrl String?       // Thumbnail for videos
+  caption     String?        // User's caption/review text
+  hashtags    String[]       // Array of hashtags used
+
+  // Product association (optional - UGC may not reference specific product)
+  productId   String?
+  productSku  String?
+
+  // External platform data (for Instagram/TikTok posts)
+  externalId  String?        // Platform's post ID
+  externalUrl String?        // Link to original post
+  permalink   String?        // Permanent link
+
+  // AI Quality Scoring (0-100)
+  qualityScore     Float?    @default(0)
+  viralityScore    Float?    @default(0)  // Predicted viral potential
+  sentimentScore   Float?    // -1 (negative) to +1 (positive)
+  engagementScore  Float?    // Predicted engagement rate
+
+  // AI Analysis metadata
+  aiAnalysis  Json?          // Full AI analysis results
+  // Example: {
+  //   "imageQuality": {"resolution": "high", "lighting": "good", "focus": "sharp"},
+  //   "videoMetrics": {"duration": 15, "hasFaces": true, "hasMusic": true},
+  //   "detectedObjects": ["product", "person", "location"],
+  //   "brandSafety": {"score": 95, "flags": []}
+  // }
+
+  // Moderation
+  status      UGCStatus      @default(PENDING)
+  moderatedAt DateTime?
+  moderatedBy String?        // User ID of moderator
+  rejectionReason String?
+
+  // Reward tracking
+  pointsAwarded    Int        @default(0)
+  pointsAwardedAt  DateTime?
+  bonusPointsEarned Int       @default(0)  // Extra points for high quality/sharing
+
+  // Social sharing tracking
+  sharedToSocial   Boolean    @default(false)
+  shareCount       Int        @default(0)
+  shareBonusAwarded Boolean   @default(false)
+
+  // Engagement metrics (updated periodically)
+  viewCount    Int           @default(0)
+  likeCount    Int           @default(0)
+  commentCount Int           @default(0)
+  shareCountExternal Int     @default(0)  // Shares on external platforms
+
+  // GDPR & Consent
+  consentGiven      Boolean   @default(false)
+  consentTypes      String[]  // ["website", "social", "email", "ads"]
+  canUseCommercially Boolean  @default(false)
+  canSharePlatforms  Boolean  @default(false)
+
+  // Rights management
+  uploadedBy   String         // User ID who uploaded
+  ipAddress    String?
+  userAgent    String?
+
+  // Relations
+  moderation   UGCModeration[]
+  reports      UGCReport[]
+
+  // Timestamps
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?      // Soft delete
+
+  @@index([businessId, status])
+  @@index([customerId])
+  @@index([platform, externalId])
+  @@index([qualityScore])
+  @@index([viralityScore])
+  @@index([createdAt])
+  @@map("ugc_submissions")
+}
+
+// ============================================================================
+// UGC MODERATION
+// ============================================================================
+
+enum ModerationType {
+  AI_AUTO_APPROVE    // AI automatically approved
+  AI_AUTO_REJECT     // AI automatically rejected
+  HUMAN_REVIEW       // Human moderator reviewed
+  USER_REPORTED      // Flagged by user report
+  SYSTEM_FLAG        // Flagged by system rules
+}
+
+enum ModerationDecision {
+  APPROVE
+  REJECT
+  FLAG_FOR_REVIEW
+  REQUEST_CHANGES
+  REMOVE
+}
+
+model UGCModeration {
+  id          String             @id @default(cuid())
+
+  // Relations
+  submissionId String
+  submission   UGCSubmission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  // Moderation details
+  type        ModerationType
+  decision    ModerationDecision
+  moderatorId String?            // User ID of human moderator (null for AI)
+
+  // Reasoning
+  reason      String?
+  flags       String[]           // ["profanity", "spam", "fake_review", "competitor_mention"]
+  confidence  Float?             // AI confidence score (0-100)
+
+  // AI Analysis
+  aiModel     String?            // "gpt-4o-vision", "custom-moderation-v1"
+  aiMetadata  Json?
+
+  // Timestamps
+  createdAt   DateTime           @default(now())
+
+  @@index([submissionId])
+  @@index([type, decision])
+  @@map("ugc_moderation")
+}
+
+// ============================================================================
+// UGC REPORTS (User-Reported Content)
+// ============================================================================
+
+enum ReportReason {
+  SPAM
+  INAPPROPRIATE
+  COPYRIGHT
+  FAKE_REVIEW
+  OFFENSIVE
+  PRIVACY_VIOLATION
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+model UGCReport {
+  id          String        @id @default(cuid())
+
+  // Relations
+  submissionId String
+  submission   UGCSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  // Reporter
+  reportedBy  String        // User ID
+  ipAddress   String?
+
+  // Report details
+  reason      ReportReason
+  description String?
+  evidence    Json?         // Screenshots, links, etc.
+
+  // Resolution
+  status      ReportStatus  @default(PENDING)
+  resolvedAt  DateTime?
+  resolvedBy  String?       // Moderator user ID
+  resolution  String?       // What action was taken
+
+  // Timestamps
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([submissionId])
+  @@index([status])
+  @@index([reportedBy])
+  @@map("ugc_reports")
+}
+
+// ============================================================================
+// NOTES
+// ============================================================================
+//
+// UGC Quality Tiers (based on qualityScore):
+// - Basic (0-40): 100 points
+// - Good (41-70): 200 points
+// - Excellent (71-90): 500 points
+// - Viral Potential (91-100): 1,000 points
+//
+// Bonus Points for Social Sharing:
+// - Share to Instagram/TikTok: +300 points
+// - Viral achievement (>10K views): +1,000 points
+//
+// AI Quality Scoring considers:
+// - Image: Resolution, lighting, product focus, composition
+// - Video: Engagement hooks, pacing, music, faces detected
+// - Text: Sentiment, helpfulness, length, grammar
+// - Virality: Trend alignment, shareability factors, emotional resonance
+//
+// GDPR Compliance:
+// - Explicit consent required via consentGiven checkbox
+// - Granular consent types (website, social, email, ads)
+// - Right to withdraw: deletedAt soft delete
+// - Data retention: Auto-delete after 2 years (background job)
+//
+// Multi-Tenant Safety:
+// - All queries filtered by businessId
+// - No cross-business UGC visibility
+// - Each business has own moderation queue

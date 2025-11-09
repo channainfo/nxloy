@@ -1,22 +1,34 @@
 # NxLoy Business Requirements
 
-**Version**: 1.0.0
-**Date**: 2025-11-06
+**Version**: 2.0.0
+**Date**: 2025-11-09
 **Status**: Active
+
+**v2.0.0 Updates**:
+- Added Unified Wallet capabilities (store credit, digital rewards, multi-tender)
+- Added Content Management system requirements
+- Added Viral Growth mechanics requirements
+- Added Social & Community features (Phase 5)
+- Enhanced ASEAN market focus (Cambodia, Singapore)
 
 ## Executive Summary
 
-NxLoy is a next-generation, multi-tenant loyalty platform designed to provide businesses across 21 industries with flexible, AI-powered customer retention solutions. The platform combines traditional loyalty mechanisms (points, punch cards, tiers) with modern technologies (AI recommendations, blockchain rewards, partner networks) to maximize customer engagement and business ROI.
+NxLoy is a next-generation, multi-tenant loyalty platform designed to provide businesses across 21 industries with flexible, AI-powered customer retention solutions. The platform combines traditional loyalty mechanisms (points, punch cards, tiers) with modern technologies (unified wallet, viral growth, AI recommendations, social community, blockchain rewards) to maximize customer engagement and business ROI.
 
 ### Key Differentiators
 
 1. **Industry-Specific Templates**: Pre-configured loyalty programs for 21 industries
 2. **Flexible Rule Engine**: 6 loyalty rule types that can be combined
-3. **AI-Powered**: Intelligent recommendations, churn prediction, personalization
-4. **Blockchain-Ready**: NFT rewards and token-based incentives (Phase 3+)
-5. **Partner Network**: Cross-business reward earning and redemption
-6. **White-Label**: Complete branding customization per tenant
-7. **Developer-Friendly**: Comprehensive APIs, webhooks, and SDKs
+3. **Unified Wallet**: Multi-tender redemption (points + store credit + digital rewards + cash)
+4. **ASEAN-First**: Multi-currency support (8 currencies), Cambodia/Singapore focus
+5. **Viral Growth Engine**: Built-in referral mechanics, social sharing, viral loops
+6. **Content Management**: Dynamic personalization, multi-language support
+7. **AI-Powered**: Intelligent recommendations, churn prediction, personalization
+8. **Social-First** (Phase 5): Community features, group challenges, influencer programs
+9. **Blockchain-Ready**: NFT rewards and token-based incentives (Phase 4)
+10. **Partner Network**: Cross-business reward earning and redemption
+11. **White-Label**: Complete branding customization per tenant
+12. **Developer-Friendly**: Comprehensive APIs, webhooks, and SDKs
 
 ## Vision Statement
 
@@ -247,6 +259,48 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 - Inventory management prevents overselling
 - Dynamic rewards maximize redemption rates
 
+### 3a. Unified Wallet (NEW v2.0.0)
+
+**Requirement**: Multi-balance wallet supporting points, store credit, and digital rewards
+
+**Features**:
+- **Store Credit**: Monetary value issued as loyalty rewards, refunds, or promotions
+  - FIFO redemption (earliest expiration first)
+  - Multi-currency support (USD, KHR, SGD, THB, VND, MYR, PHP, IDR)
+  - 12-month expiration + 30-day grace period
+  - Breakage revenue tracking (IFRS 15 compliance)
+  - Methods: promotional, refund, cashback_reward, automated
+
+- **Digital Rewards**: Digital vouchers issued as loyalty benefits
+  - Merchant-specific or generic rewards
+  - Partner network redemption
+  - Same expiration policy as store credit
+  - NOT purchased gift cards (Phase 1) - loyalty benefits only
+
+- **Multi-Tender Redemption**: Combine multiple balance types
+  - Depletion order: digital rewards → store credit → points → cash
+  - Expiration override (use expiring balances first)
+  - Saga pattern for transaction atomicity
+  - Distributed locking to prevent double-spend
+
+- **Wallet API**: Unified balance view
+  - Real-time balance aggregation
+  - Expiration warnings (30, 7, 1 days before)
+  - Affordability checks (can customer redeem this reward?)
+  - Payment recommendations (optimal balance mix)
+
+**Business Value**:
+- **Increased Redemption**: More payment options = higher redemption rates
+- **Customer Flexibility**: Use rewards how they want (not just points)
+- **Breakage Revenue**: Recognize revenue from expired credits (15% average breakage rate)
+- **ASEAN Expansion**: Multi-currency support enables regional growth
+- **Regulatory Compliance**: Loyalty program structure avoids gift card regulations (Philippines Gift Check Act)
+
+**Target Markets**:
+- **Cambodia** (home base): KHR primary currency
+- **Singapore** (primary expansion): SGD, regulatory-friendly
+- **ASEAN expansion**: Thailand, Vietnam, Malaysia, Philippines, Indonesia
+
 ### 4. Customer Management
 
 **Requirement**: Comprehensive customer profile and segmentation
@@ -324,6 +378,112 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 - Leverages word-of-mouth marketing
 - Increases customer engagement (advocacy)
 
+### 7a. Viral Growth Engine (NEW v2.0.0)
+
+**Requirement**: Systematic viral mechanics to drive organic growth
+
+**Phase 2 Features** (Basic):
+- **Referral Campaigns**: Milestone-based referrals (invite 3 friends, get bonus)
+- **Share Buttons**: One-click sharing to social media
+- **Viral Loops**: "Invite friends to unlock group reward"
+- **Viral Coefficient Tracking**: Measure K-factor (invites per user × conversion rate)
+- **Fraud Detection**: Prevent duplicate accounts, self-referrals
+
+**Phase 3 Features** (Advanced):
+- **Social Sharing Incentives**: "Share achievement for 50 bonus points"
+- **Influencer Partnerships**: Micro-influencer referral programs
+- **Network Effects Analytics**: Track viral growth patterns
+- **A/B Testing**: Test different viral mechanics
+- **Viral Campaign Builder**: Businesses create custom viral campaigns
+
+**Business Value**:
+- **Lower CAC**: Viral growth reduces paid acquisition costs (target: 40% organic growth)
+- **Faster Growth**: Exponential vs. linear customer acquisition
+- **Higher Quality Leads**: Referred customers have 37% higher retention
+- **Social Proof**: Visible social activity builds trust
+- **Competitive Moat**: Network effects create defensibility
+
+**Success Metrics**:
+- Viral coefficient (K-factor): >0.5 (each user brings 0.5+ new users)
+- Referral conversion rate: >15%
+- Referral customer LTV: 1.5x vs. organic
+- Share rate: >10% of transactions shared socially
+
+### 7b. Content Management (NEW v2.0.0)
+
+**Requirement**: Centralized content system for personalized marketing
+
+**Phase 2 Features**:
+- **Content Library**: Repository for all marketing assets
+  - Email templates (welcome, reward earned, expiration reminder)
+  - SMS templates (short, actionable messages)
+  - Push notification templates
+  - In-app message templates
+
+- **Dynamic Personalization**: Variable insertion (name, points, tier, etc.)
+- **A/B Testing**: Test subject lines, copy, CTAs
+- **Multi-Language Support**: Localized content per region (EN, KH, TH, VN, etc.)
+- **Content Scheduling**: Schedule campaigns in advance
+- **Template Marketplace**: Pre-built templates per industry
+
+**Phase 3 Features**:
+- **AI Content Generation**: Auto-generate personalized copy
+- **Content Performance Analytics**: Track open rates, click rates, conversions
+- **Visual Content Builder**: Drag-and-drop email builder
+- **Content Governance**: Approval workflows for brand compliance
+- **User-Generated Content (UGC)**: Customer reviews, photos, testimonials
+
+**Business Value**:
+- **Consistency**: Unified brand voice across all channels
+- **Efficiency**: Reusable templates save time (80% faster campaign creation)
+- **Personalization**: Higher engagement (2-3x open rates with personalization)
+- **Localization**: Reach non-English speakers (60% of ASEAN population)
+- **Compliance**: Approved templates reduce legal risk
+
+### 7c. Social & Community Features (Phase 5) (NEW v2.0.0)
+
+**Requirement**: Social-first loyalty experiences for Gen Z/Alpha demographics
+
+**Features**:
+- **Social Feed**: Instagram-style feed for customer achievements
+  - Share purchases, rewards, badges
+  - Like, comment, react on posts
+  - User-generated content (photos, reviews)
+  - Content moderation (AI + manual review)
+
+- **Group Challenges**: Team-based competitions
+  - "Coffee Crew Challenge: Buy 50 coffees as a team this month"
+  - Real-time progress tracking
+  - Team leaderboards
+  - Shared rewards distribution
+
+- **Gifting & Social Commerce**:
+  - Send rewards/points to friends
+  - Gift digital rewards to others
+  - Social wish lists (save favorite rewards)
+  - Group purchases (split bills for rewards)
+
+- **Influencer Programs**:
+  - Micro-influencer partnerships
+  - Brand ambassador programs
+  - Exclusive community perks
+  - Influencer analytics dashboard
+
+- **Community Events**: Virtual and in-person meetups for loyalty members
+
+**Business Value**:
+- **Gen Z Engagement**: 66% of Gen Z prefer brands with community features
+- **Viral Amplification**: Social features drive 3x more word-of-mouth
+- **Emotional Connection**: Community builds loyalty beyond transactions
+- **Content Creation**: UGC reduces marketing content costs by 50%
+- **Retention**: Social users have 2-3x higher retention rates
+
+**Success Metrics**:
+- Social engagement rate: >25% of active users
+- UGC submissions: >10 per week per 100 customers
+- Challenge participation: >30% of customers
+- Influencer partnerships: 10+ micro-influencers per vertical
+
 ### 8. Analytics & Reporting
 
 **Requirement**: Actionable insights for business decision-making
@@ -335,6 +495,10 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 - Revenue attribution (loyalty program impact)
 - Churn prediction (at-risk customers)
 - ROI calculator (program cost vs. revenue)
+- **Wallet Analytics** (NEW v2.0.0): Breakage revenue, multi-tender usage, FIFO efficiency
+- **Viral Growth Analytics** (NEW v2.0.0): K-factor, referral conversion, viral loops
+- **Content Performance** (NEW v2.0.0): Template usage, A/B test results, personalization lift
+- **Social Engagement** (NEW v2.0.0): UGC volume, challenge participation, influencer ROI
 
 **Reports**:
 - Executive dashboard (high-level KPIs)
@@ -342,6 +506,9 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 - Campaign performance (which offers work best?)
 - Trend analysis (growth over time)
 - Benchmark reports (compare to industry averages)
+- **Wallet Breakage Report** (NEW v2.0.0): Expired credits, revenue recognition timeline
+- **Viral Growth Dashboard** (NEW v2.0.0): Referral funnels, share rates, viral coefficient
+- **Social Engagement Report** (NEW v2.0.0): Community health, UGC analytics, influencer performance
 
 **Export Formats**: CSV, PDF, scheduled email delivery
 
@@ -349,6 +516,9 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 - Data-driven decisions (test and optimize programs)
 - Demonstrates ROI (justifies program investment)
 - Identifies opportunities (underperforming segments, trending products)
+- **Breakage Revenue Visibility**: Track expired credits and revenue recognition (IFRS 15)
+- **Viral Growth Insights**: Optimize referral programs for exponential growth
+- **Content Effectiveness**: Measure personalization lift and template performance
 
 ## Non-Functional Requirements
 
@@ -506,6 +676,12 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 | End Customers per Business | >200 | Scale |
 | Monthly Active Customers | >70% | Engagement |
 | Reward Redemption Rate | >40% | Program effectiveness |
+| **Wallet Adoption Rate** (NEW v2.0.0) | >60% | Multi-tender usage |
+| **Multi-Tender Transactions** (NEW v2.0.0) | >25% | Advanced wallet features |
+| **Viral Coefficient (K-Factor)** (NEW v2.0.0) | >0.5 | Viral growth momentum |
+| **Referral Conversion Rate** (NEW v2.0.0) | >15% | Referral quality |
+| **Social Engagement Rate** (NEW v2.0.0) | >25% | Community health |
+| **Content Personalization Lift** (NEW v2.0.0) | >30% | Content effectiveness |
 
 ## Competitive Landscape
 
@@ -536,10 +712,15 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 1. **Industry Templates**: Pre-configured for 21 industries (competitors: 3-5)
 2. **Flexible Rules**: 6 rule types combinable (competitors: 1-2)
 3. **AI-Powered**: Intelligent recommendations (competitors: none)
-4. **Partner Network**: Cross-business rewards (competitors: limited)
-5. **Blockchain-Ready**: NFT rewards (competitors: none)
-6. **Developer-Friendly**: Comprehensive APIs (competitors: limited/no API)
-7. **Pricing**: Mid-market sweet spot ($49-299) with enterprise features
+4. **Unified Wallet** (NEW v2.0.0): Multi-tender redemption with points, store credit, digital rewards (competitors: single tender only)
+5. **ASEAN-First** (NEW v2.0.0): 8-currency support (USD, KHR, SGD, THB, VND, MYR, PHP, IDR) with Cambodia/Singapore regulatory focus (competitors: USD/EUR only)
+6. **Viral Growth Engine** (NEW v2.0.0): Built-in referral mechanics, social sharing, viral loops (competitors: basic referrals only)
+7. **Content Management** (NEW v2.0.0): Dynamic personalization, A/B testing, multi-language support (competitors: static templates)
+8. **Partner Network**: Cross-business rewards (competitors: limited)
+9. **Blockchain-Ready**: NFT rewards (competitors: none)
+10. **Social-First** (NEW v2.0.0): Community features, group challenges, influencer programs (competitors: none)
+11. **Developer-Friendly**: Comprehensive APIs (competitors: limited/no API)
+12. **Pricing**: Mid-market sweet spot ($49-299) with enterprise features
 
 ## Risks & Mitigation
 
@@ -553,6 +734,8 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 - Template marketplace (viral growth)
 - Partner referral program (incentivized growth)
 - Free trial with low friction (self-service onboarding)
+- **Viral Growth Engine** (NEW v2.0.0): Built-in referral mechanics reduce paid CAC by 40%
+- **Content Library** (NEW v2.0.0): Pre-built templates accelerate time-to-value, improving conversion
 
 ### Risk 2: Low Trial-to-Paid Conversion
 
@@ -575,6 +758,8 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 - Community building (best practices, case studies)
 - Feature adoption (ensure customers use advanced features)
 - Lock-in via integrations (more integrations = harder to leave)
+- **Unified Wallet Lock-In** (NEW v2.0.0): Multi-tender balances create switching costs
+- **Social Community** (NEW v2.0.0): Community features drive 2-3x higher retention rates
 
 ### Risk 4: Technical Scalability Issues
 
@@ -593,13 +778,21 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 
 - **ARR**: Annual Recurring Revenue
 - **ARPA**: Average Revenue Per Account
+- **ASEAN**: Association of Southeast Asian Nations (10 member states including Cambodia, Singapore, Thailand, Vietnam, etc.)
+- **Breakage**: Expired loyalty credits that become revenue (IFRS 15 compliant)
 - **CAC**: Customer Acquisition Cost
+- **FIFO**: First-In-First-Out (redemption order: earliest expiration first)
+- **IFRS 15**: International Financial Reporting Standard 15 (revenue recognition)
+- **K-Factor**: Viral coefficient (number of new users each user brings in)
 - **LTV**: Lifetime Value
 - **MRR**: Monthly Recurring Revenue
+- **Multi-Tender**: Combining multiple payment methods (points + store credit + digital rewards + cash)
 - **NPS**: Net Promoter Score
 - **RPO**: Recovery Point Objective (max data loss)
 - **RTO**: Recovery Time Objective (max downtime)
 - **SLA**: Service Level Agreement
+- **UGC**: User-Generated Content (photos, reviews, social posts)
+- **Viral Loop**: Self-reinforcing growth cycle where users invite more users
 
 ### References
 
@@ -607,10 +800,14 @@ NxLoy is a next-generation, multi-tenant loyalty platform designed to provide bu
 - [Technical Architecture](../architecture/README.md)
 - [API Contracts](../contracts/openapi.yaml)
 - [Feature Specifications](./features/)
+- **[Unified Wallet Feature Spec](./features/unified-wallet/FEATURE-SPEC.md)** (NEW v2.0.0)
+- **[Social Community Feature Spec](./features/social-community/FEATURE-SPEC.md)** (NEW v2.0.0)
+- **[Viral Growth Feature Spec](./features/viral-growth/FEATURE-SPEC.md)** (NEW v2.0.0)
+- **[Content Management Feature Spec](./features/content-management/FEATURE-SPEC.md)** (NEW v2.0.0)
 
 ---
 
 **Document Owner**: Product Team
 **Review Cycle**: Quarterly
-**Last Review**: 2025-11-06
-**Next Review**: 2026-02-06
+**Last Review**: 2025-11-09
+**Next Review**: 2026-02-09

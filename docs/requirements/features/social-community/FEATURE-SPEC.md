@@ -2197,6 +2197,582 @@ describe('Challenge Progress Updates', () => {
 
 ---
 
+## Enhancement: AI-Powered Influencer Matching & Discovery
+
+**Added**: 2025-11-09
+**Integration**: Works with [Influencer Network & Matching](/docs/requirements/features/influencer-network/FEATURE-SPEC.md) feature
+**Priority**: P1 (Phase 5.2 enhancement for Months 16-17)
+
+### Overview
+
+The existing influencer program (FR5) enables businesses to manually partner with influencers. This enhancement adds AI-powered influencer discovery, automated matching based on audience overlap, and automated outreach using GPT-4o.
+
+**Key Additions**:
+1. **AI Influencer Discovery**: Scrape Instagram/TikTok to find micro-influencers (10K-50K followers) in business's niche
+2. **Audience Overlap Analysis**: Calculate match score based on influencer demographics vs. business target audience
+3. **Automated DM Outreach**: GPT-4o generates personalized partnership invitations sent via Instagram API
+4. **Engagement Prediction**: Predict expected ROI (signups, conversions) before reaching out
+
+### Success Criteria Enhancement
+
+| Metric | Current Target (FR5) | Enhanced Target (AI) | Measurement |
+|--------|---------------------|---------------------|-------------|
+| Influencer Discovery | Manual search | 500+ AI-discovered/month | Instagram API scraping |
+| Match Score Accuracy | N/A | 80%+ precision | Actual conversions vs. predicted |
+| Outreach Conversion | N/A | 15%+ accept partnership | Influencers who accept / contacted |
+| Time to Partnership | Days (manual) | Hours (automated) | Time from discovery to contract |
+| ROI per Influencer | Unknown | 11x (industry benchmark) | Revenue / commission paid |
+
+### Functional Requirements Enhancement
+
+#### FR5.1: AI Influencer Discovery (NEW)
+
+**Description**: Automatically discover relevant micro-influencers using Instagram Graph API and TikTok Creator Marketplace API
+
+**Discovery Algorithm**:
+```python
+def discover_influencers(business_profile):
+    """
+    Discover influencers based on business niche, location, and target demographics
+    """
+    # 1. Extract business keywords (coffee, fashion, fitness, etc.)
+    keywords = extract_niche_keywords(business_profile.category, business_profile.description)
+
+    # 2. Search Instagram hashtags
+    instagram_influencers = []
+    for keyword in keywords:
+        hashtag = f"#{keyword}"
+        posts = instagram_api.search_hashtag(hashtag, limit=1000)
+
+        # Filter for micro-influencers (10K-50K followers)
+        for post in posts:
+            user = post.author
+            if 10000 <= user.followers_count <= 50000 and user.engagement_rate > 0.03:
+                instagram_influencers.append(user)
+
+    # 3. Search TikTok Creator Marketplace
+    tiktok_influencers = tiktok_api.search_creators(
+        niche=business_profile.category,
+        follower_range=(10000, 50000),
+        engagement_rate_min=0.05,
+        location=business_profile.location
+    )
+
+    # 4. Deduplicate and score
+    all_influencers = deduplicate(instagram_influencers + tiktok_influencers)
+    scored_influencers = [
+        {
+            'influencer': inf,
+            'match_score': calculate_match_score(inf, business_profile)
+        }
+        for inf in all_influencers
+    ]
+
+    # 5. Return top 100 matches (> 70 match score)
+    return sorted(scored_influencers, key=lambda x: x['match_score'], reverse=True)[:100]
+```
+
+**API Integration**:
+```typescript
+// Instagram Graph API (requires Business Account)
+GET https://graph.instagram.com/v18.0/ig_hashtag_search
+  ?user_id={business_ig_id}
+  &q={hashtag}
+  &access_token={access_token}
+
+// TikTok Creator Marketplace API
+GET https://open-api.tiktok.com/v1/creator/search
+  ?niche={category}
+  &follower_min=10000
+  &follower_max=50000
+  &location={country_code}
+```
+
+---
+
+#### FR5.2: Audience Overlap Analysis (NEW)
+
+**Description**: Calculate match score (0-100) based on influencer audience demographics vs. business target audience
+
+**Match Score Formula**:
+```python
+def calculate_match_score(influencer, business):
+    """
+    Calculate match score based on:
+    - Audience overlap (35%): Age, gender, location match
+    - Engagement rate (25%): Higher = better content quality
+    - Content alignment (20%): Niche relevance
+    - Bot score (15%): Lower = more authentic followers
+    - Follower tier (5%): Micro-influencers preferred
+    """
+    weights = {
+        'audience_overlap': 0.35,
+        'engagement_rate': 0.25,
+        'content_alignment': 0.20,
+        'bot_score': 0.15,
+        'follower_tier': 0.05
+    }
+
+    scores = {}
+
+    # 1. Audience overlap (0-100)
+    scores['audience_overlap'] = calculate_audience_overlap(
+        influencer.demographics,
+        business.target_demographics
+    )
+
+    # 2. Engagement rate (0-100)
+    # Industry benchmark: 3% = 50 points, 5% = 75 points, 10% = 100 points
+    engagement_rate = influencer.engagement_rate
+    scores['engagement_rate'] = min(100, (engagement_rate / 0.10) * 100)
+
+    # 3. Content alignment (0-100)
+    scores['content_alignment'] = calculate_content_similarity(
+        influencer.recent_posts,
+        business.category
+    )
+
+    # 4. Bot score (0-100, inverted)
+    # Use HypeAuditor API to detect fake followers
+    bot_percentage = hypeauditor_api.check_audience_quality(influencer.username)
+    scores['bot_score'] = 100 - bot_percentage
+
+    # 5. Follower tier (0-100)
+    # 10K-20K = 100, 20K-35K = 80, 35K-50K = 60
+    if influencer.followers_count < 20000:
+        scores['follower_tier'] = 100
+    elif influencer.followers_count < 35000:
+        scores['follower_tier'] = 80
+    else:
+        scores['follower_tier'] = 60
+
+    # Weighted sum
+    match_score = sum(scores[key] * weights[key] for key in scores.keys())
+    return round(match_score, 1)
+
+
+def calculate_audience_overlap(influencer_demo, business_target_demo):
+    """
+    Calculate demographic overlap percentage
+    """
+    overlap_scores = []
+
+    # Age overlap
+    for age_range in business_target_demo.age_ranges:
+        if age_range in influencer_demo.age_ranges:
+            overlap_scores.append(influencer_demo.age_ranges[age_range] / 100)
+
+    # Gender overlap
+    if business_target_demo.gender == 'ALL':
+        overlap_scores.append(1.0)
+    elif business_target_demo.gender == influencer_demo.primary_gender:
+        overlap_scores.append(influencer_demo.gender_percentages[business_target_demo.gender] / 100)
+
+    # Location overlap
+    if business_target_demo.location in influencer_demo.top_locations:
+        overlap_scores.append(1.0)
+
+    # Average overlap
+    audience_overlap = (sum(overlap_scores) / len(overlap_scores)) * 100
+    return round(audience_overlap, 1)
+```
+
+**Example Match Score Output**:
+```json
+{
+  "influencer": {
+    "username": "coffee_lover_sf",
+    "followers": 18500,
+    "engagement_rate": 0.047
+  },
+  "match_score": 87.3,
+  "breakdown": {
+    "audience_overlap": 92.0,
+    "engagement_rate": 47.0,
+    "content_alignment": 95.0,
+    "bot_score": 88.0,
+    "follower_tier": 100
+  },
+  "predicted_roi": {
+    "expected_signups": 45,
+    "expected_conversions": 22,
+    "expected_revenue": "$1,100",
+    "commission_cost": "$225",
+    "net_profit": "$875"
+  }
+}
+```
+
+---
+
+#### FR5.3: Automated DM Outreach (NEW)
+
+**Description**: GPT-4o generates personalized partnership invitation DMs sent via Instagram API
+
+**Outreach Workflow**:
+```python
+def send_partnership_invitation(influencer, business):
+    """
+    Generate personalized DM and send via Instagram API
+    """
+    # 1. Generate personalized message using GPT-4o
+    prompt = f"""
+    You are a partnership manager for {business.name}, a {business.category} business.
+    Write a friendly, personalized Instagram DM to @{influencer.username} (micro-influencer, {influencer.followers_count} followers).
+
+    Context:
+    - Business: {business.name} ({business.location})
+    - Offer: ${business.influencer_commission_per_signup} per signup via unique referral code
+    - Why them: High engagement rate ({influencer.engagement_rate * 100}%), audience matches our demographic
+    - Tone: Friendly, professional, authentic (avoid corporate language)
+
+    Include:
+    1. Brief intro to {business.name} and why we love their content
+    2. Partnership offer details (commission structure)
+    3. Call to action (reply to discuss or visit link)
+    4. Keep under 150 words
+    """
+
+    dm_message = openai.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}]
+    ).choices[0].message.content
+
+    # 2. Send DM via Instagram API
+    instagram_api.send_direct_message(
+        sender_id=business.instagram_account_id,
+        recipient_username=influencer.username,
+        message=dm_message
+    )
+
+    # 3. Log outreach
+    db.influencer_outreach.insert({
+        'business_id': business.id,
+        'influencer_username': influencer.username,
+        'match_score': influencer.match_score,
+        'message_sent': dm_message,
+        'sent_at': datetime.now(),
+        'status': 'PENDING'
+    })
+
+    # 4. Schedule follow-up (3 days later if no response)
+    scheduler.schedule_task(
+        task='follow_up_influencer_outreach',
+        delay_days=3,
+        params={'outreach_id': outreach.id}
+    )
+```
+
+**Example Generated DM**:
+```
+Hey @coffee_lover_sf! 👋
+
+We're Coffee Rewards, a local coffee shop in SF, and we absolutely love your latte art content! Your engagement rate is amazing (4.7%) and your audience matches our vibe perfectly.
+
+We'd love to partner with you through our influencer program:
+• Earn $5 per signup via your unique code
+• Bonus: $500 after 100 signups
+• Free coffee samples to share with followers
+
+Interested? Reply here or check out our partnership page: nxloy.com/partner/coffee-rewards
+
+Cheers! ☕
+— The Coffee Rewards Team
+```
+
+**API Endpoint**:
+```typescript
+// Send Instagram DM via Facebook Graph API
+POST https://graph.instagram.com/v18.0/me/messages
+{
+  "recipient": {
+    "username": "coffee_lover_sf"
+  },
+  "message": {
+    "text": "Hey @coffee_lover_sf! 👋 We're Coffee Rewards..."
+  }
+}
+```
+
+---
+
+#### FR5.4: Engagement Prediction & ROI Forecast (NEW)
+
+**Description**: Predict expected signups and revenue before reaching out to influencer
+
+**Prediction Model**:
+```python
+def predict_influencer_roi(influencer, business):
+    """
+    Predict ROI using regression model trained on historical influencer performance
+    """
+    # Features
+    features = {
+        'followers_count': influencer.followers_count,
+        'engagement_rate': influencer.engagement_rate,
+        'match_score': influencer.match_score,
+        'bot_score': influencer.bot_score,
+        'avg_likes': influencer.avg_likes_per_post,
+        'avg_comments': influencer.avg_comments_per_post,
+        'niche_alignment': influencer.content_alignment_score
+    }
+
+    # Model trained on 1,000+ past influencer partnerships
+    model = load_model('influencer_roi_predictor.pkl')
+
+    # Predict signups
+    predicted_signups = model.predict_signups(features)
+    predicted_conversions = predicted_signups * business.avg_conversion_rate
+    predicted_revenue = predicted_conversions * business.avg_customer_ltv
+
+    # Calculate ROI
+    commission_cost = predicted_signups * business.commission_per_signup
+    net_profit = predicted_revenue - commission_cost
+    roi_ratio = predicted_revenue / commission_cost if commission_cost > 0 else 0
+
+    return {
+        'predicted_signups': round(predicted_signups),
+        'predicted_conversions': round(predicted_conversions),
+        'predicted_revenue': round(predicted_revenue, 2),
+        'commission_cost': round(commission_cost, 2),
+        'net_profit': round(net_profit, 2),
+        'roi_ratio': round(roi_ratio, 1)
+    }
+```
+
+**Example Prediction**:
+```json
+{
+  "influencer": "@coffee_lover_sf",
+  "match_score": 87.3,
+  "predicted_performance": {
+    "signups": 45,
+    "conversions": 22,
+    "revenue": "$1,100",
+    "commission_cost": "$225",
+    "net_profit": "$875",
+    "roi": "4.9x"
+  },
+  "confidence": "78%",
+  "recommendation": "HIGH_PRIORITY - Contact immediately"
+}
+```
+
+---
+
+### Database Schema Enhancement
+
+Add to existing `Influencer` model:
+
+```prisma
+model Influencer {
+  id                  String   @id @default(uuid()) @db.Uuid
+  customerId          String?  @db.Uuid @unique  // Nullable if discovered but not onboarded
+  businessId          String   @db.Uuid
+
+  // Discovery fields (NEW)
+  discoverySource     String?  @db.VarChar(50) // INSTAGRAM, TIKTOK, MANUAL
+  username            String   @db.VarChar(100)
+  platform            String   @db.VarChar(20) // INSTAGRAM, TIKTOK
+  followersCount      Int      @default(0)
+  engagementRate      Float    @default(0)
+  matchScore          Float?   @default(0) // 0-100
+  botScore            Float?   @default(0) // 0-100 (lower = better)
+
+  // Demographics (NEW)
+  demographics        Json?    // Age, gender, location breakdown
+  topLocations        Json?    // Top 5 follower locations
+
+  // Outreach tracking (NEW)
+  outreachStatus      String?  @db.VarChar(20) // DISCOVERED, CONTACTED, RESPONDED, ACCEPTED, REJECTED
+  contactedAt         DateTime?
+  respondedAt         DateTime?
+
+  // Prediction (NEW)
+  predictedSignups    Int?     @default(0)
+  predictedRevenue    Float?   @default(0)
+  predictedROI        Float?   @default(0)
+
+  // Existing fields
+  referralCode        String?  @db.VarChar(20) @unique
+  status              String   @db.VarChar(20) // PENDING, APPROVED, REJECTED, SUSPENDED
+  commissionType      String   @db.VarChar(50) // PER_SIGNUP, PERCENTAGE
+  commissionRate      Float    // USD per signup OR %
+  totalEarnings       Float    @default(0) // USD
+  totalSignups        Int      @default(0)
+  totalConversions    Int      @default(0)
+
+  createdAt           DateTime @default(now())
+  approvedAt          DateTime?
+
+  // Relations
+  customer            Customer? @relation(fields: [customerId], references: [id])
+  business            Business  @relation(fields: [businessId], references: [id])
+
+  @@index([businessId, matchScore])
+  @@index([businessId, outreachStatus])
+  @@map("influencers")
+}
+
+model InfluencerOutreach {
+  id                  String   @id @default(uuid()) @db.Uuid
+  businessId          String   @db.Uuid
+  influencerUsername  String   @db.VarChar(100)
+  platform            String   @db.VarChar(20) // INSTAGRAM, TIKTOK
+
+  matchScore          Float    @default(0)
+  messageSent         String   @db.Text
+  messageTemplate     String?  @db.VarChar(100) // GPT_GENERATED, MANUAL
+
+  status              String   @db.VarChar(20) // SENT, RESPONDED, ACCEPTED, REJECTED, NO_RESPONSE
+  sentAt              DateTime @default(now())
+  respondedAt         DateTime?
+  followUpSentAt      DateTime?
+
+  // Relations
+  business            Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId, sentAt])
+  @@index([businessId, status])
+  @@map("influencer_outreach")
+}
+```
+
+---
+
+### Integration with Influencer Network Feature
+
+This enhancement integrates seamlessly with the dedicated [Influencer Network & Matching](/docs/requirements/features/influencer-network/FEATURE-SPEC.md) feature:
+
+**Division of Responsibilities**:
+- **Social Community (this feature)**: Basic influencer program UI (dashboard, referral codes, payouts)
+- **Influencer Network**: Advanced AI discovery, matching algorithms, automated outreach, performance prediction
+
+**Shared Components**:
+1. **Influencer model** - Extended with AI discovery fields
+2. **Referral tracking** - Reuses existing referral infrastructure
+3. **Commission payouts** - Shared payment processing logic
+4. **Analytics dashboard** - Both features contribute metrics
+
+**Cross-Feature Workflow**:
+```
+1. Business creates loyalty program (Loyalty Programs feature)
+2. Business enables influencer program (Social Community FR5)
+3. AI discovers 500+ influencers (Influencer Network)
+4. Business reviews matches, approves top 50 (Influencer Network)
+5. AI sends automated DMs (Influencer Network)
+6. Influencer accepts, creates account (Social Community)
+7. Influencer receives dashboard access (Social Community FR5.2)
+8. Influencer promotes, earns commissions (Referrals + Social Community)
+9. Business tracks ROI (Viral Analytics feature)
+```
+
+See full AI discovery implementation in `/docs/requirements/features/influencer-network/FEATURE-SPEC.md`.
+
+---
+
+### API Endpoints Enhancement
+
+Add to existing Social Community API:
+
+```typescript
+// AI Influencer Discovery
+POST /api/v1/social/influencers/discover
+{
+  "niche": "coffee",
+  "location": "San Francisco, CA",
+  "followerRange": [10000, 50000],
+  "minEngagementRate": 0.03
+}
+
+Response:
+{
+  "discovered": 127,
+  "topMatches": [
+    {
+      "username": "coffee_lover_sf",
+      "platform": "INSTAGRAM",
+      "followers": 18500,
+      "engagementRate": 0.047,
+      "matchScore": 87.3,
+      "predictedROI": "4.9x"
+    }
+    // ... more
+  ]
+}
+
+// Get influencer match details
+GET /api/v1/social/influencers/matches/{username}
+
+Response:
+{
+  "influencer": {...},
+  "matchScore": 87.3,
+  "breakdown": {
+    "audienceOverlap": 92.0,
+    "engagementRate": 47.0,
+    "contentAlignment": 95.0,
+    "botScore": 88.0
+  },
+  "predictedROI": {...},
+  "recommendation": "HIGH_PRIORITY"
+}
+
+// Send partnership invitation
+POST /api/v1/social/influencers/invite
+{
+  "username": "coffee_lover_sf",
+  "platform": "INSTAGRAM",
+  "customMessage": "Optional override for GPT-generated message"
+}
+
+Response:
+{
+  "status": "SENT",
+  "messageSent": "Hey @coffee_lover_sf! 👋...",
+  "followUpScheduled": "2025-11-12T10:00:00Z"
+}
+
+// Get outreach status
+GET /api/v1/social/influencers/outreach?status=PENDING
+
+Response:
+{
+  "total": 47,
+  "pending": 32,
+  "responded": 8,
+  "accepted": 7,
+  "outreach": [...]
+}
+```
+
+---
+
+### Implementation Priority
+
+**Phase 5.2 - Month 16 (NEW)**:
+- [ ] Week 1: Instagram/TikTok API integration
+- [ ] Week 2: Implement match score algorithm
+- [ ] Week 3: Build GPT-4o DM generation
+- [ ] Week 4: Deploy ROI prediction model
+
+**Success Metrics (Month 16)**:
+- 500+ influencers discovered per business
+- 80%+ match score accuracy (conversions vs. predicted)
+- 15%+ outreach acceptance rate
+- 4 hours avg. time to partnership (vs. days manually)
+
+---
+
+### References
+
+- [Feature Spec: Influencer Network & Matching](/docs/requirements/features/influencer-network/FEATURE-SPEC.md) - Full AI discovery implementation
+- [Feature Spec: Viral Analytics & Growth](/docs/requirements/features/viral-analytics/FEATURE-SPEC.md) - K-factor tracking
+- [Feature Spec: Referrals](/docs/requirements/features/referrals/FEATURE-SPEC.md) - Referral code infrastructure
+- [Market Analysis: Viral Growth Features](/Users/channaly/nxloy-product-market-researcher/analysis/COMPREHENSIVE-FEATURES-MARKET-ANALYSIS.md) - Influencer ROI benchmarks
+
+---
+
 **Document Owner**: Backend Team (Social Squad)
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-11-09
 **Status**: Ready for Review

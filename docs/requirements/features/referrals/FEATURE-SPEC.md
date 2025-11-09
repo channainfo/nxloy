@@ -875,3 +875,65 @@ For implementation details, reference:
 - **Domain Spec**: [referrals domain](../../domain-specs/referrals/README.md)
 - **Master Reference**: [loyalty-templates](../loyalty-templates/) for implementation patterns
 - **Related Features**: [loyalty-programs](../loyalty-programs/), [reward-catalog](../reward-catalog/)
+
+---
+
+## 🔄 Enhancement: Viral Coefficient (K-Factor) Tracking
+
+**Added**: 2025-11-09
+**Integration**: [Viral Analytics & Growth](../viral-analytics/FEATURE-SPEC.md)
+
+### Overview
+
+Extend referral program with viral coefficient (K-factor) tracking to measure and optimize viral growth.
+
+### K-Factor Calculation
+
+```
+K = (New Customers from Referrals) / (Existing Customers)
+
+Target: K = 0.3-0.5 for referral channel alone
+Combined with challenges + influencers: K = 0.5-0.7 overall
+```
+
+### Enhanced Success Criteria
+
+- [ ] Metric 8: K-factor ≥ 0.3 for referral channel (30% viral growth)
+- [ ] Metric 9: Track secondary referrals (referrals from referred customers)
+- [ ] Metric 10: Viral cycle time < 10 days (time from referral to next referral)
+- [ ] Metric 11: 20% of referred customers become referrers themselves
+
+### New Features
+
+**1. Viral Loop Tracking**:
+- Track referrals up to 3 levels deep (primary, secondary, tertiary)
+- Calculate viral multiplier: Total referrals / Primary referrals
+- Identify viral "trees" (customers who spawn large referral networks)
+
+**2. Super Referrer Identification**:
+- Automatically identify top 20% of referrers (Pareto principle)
+- Offer 2x rewards to super referrers
+- Personalized VIP outreach for high-potential customers
+- See: [Social Graph Analysis](../influencer-network/FEATURE-SPEC.md#super-referrer-identification)
+
+**3. Analytics Dashboard Enhancements**:
+- Real-time K-factor tracking (daily, weekly, monthly)
+- Channel breakdown (referral vs challenge vs influencer vs UGC)
+- Viral loop visualization (tree diagram showing referral chains)
+- Optimization recommendations powered by AI
+
+**4. Database Schema Updates**:
+- See: `/packages/database/prisma/schema/referrals.prisma` (ReferralAnalytics model)
+- Added fields: `viralCoefficient`, `secondaryReferrals`, `tertiaryReferrals`, `viralCycleTime`
+
+### Implementation Priority
+
+**Phase 2B** (Months 5-6):
+- Integrate with existing referral code system
+- Add K-factor calculation engine
+- Build viral analytics dashboard
+- Launch super referrer identification
+
+**Success Milestone**: Achieve K ≥ 0.3 within 3 months of launch
+
+For full technical specifications, see [Viral Analytics Feature Spec](../viral-analytics/FEATURE-SPEC.md)

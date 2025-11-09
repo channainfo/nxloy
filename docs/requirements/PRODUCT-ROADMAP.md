@@ -1,9 +1,15 @@
 # NxLoy Product Roadmap
 
-**Version**: 1.0.0
-**Date**: 2025-11-06
+**Version**: 2.0.0
+**Date**: 2025-11-09
 **Status**: Active
 **Planning Horizon**: 18 months
+
+**v2.0.0 Updates**:
+- Added Unified Wallet features (Phase 1) - Store credit, digital rewards, multi-tender redemption
+- Clarified Social & Community features placement (Phase 5)
+- Added Content Management features (Phase 2-3)
+- Added Viral Growth mechanics integration across phases
 
 ## Roadmap Overview
 
@@ -107,6 +113,16 @@ gantt
 - [ ] Redemption history
 - [ ] Redemption validation
 - [ ] Redemption limits (per customer, per period)
+
+**Unified Wallet** (Weeks 11-12) **NEW v2.0.0**
+- [ ] Store credit issuance and redemption
+- [ ] Digital reward issuance and redemption
+- [ ] Multi-currency support (USD, KHR, SGD, THB, VND, MYR, PHP, IDR)
+- [ ] Multi-tender redemption (points + store credit + digital rewards)
+- [ ] FIFO redemption logic (earliest expiration first)
+- [ ] Wallet balance aggregation API
+- [ ] Expiration management (12-month + 30-day grace period)
+- [ ] Breakage revenue tracking (IFRS 15 compliance)
 
 **Industry Templates** (Weeks 11-12)
 - [ ] Template data seeding
@@ -240,10 +256,18 @@ gantt
 **MVP Launch Criteria**:
 - ✅ Backend API (auth, customers, loyalty, rewards)
 - ✅ Web dashboard (program builder, analytics)
+- ✅ **NEW (v2.0.0)**: Unified Wallet (store credit, digital rewards, multi-tender)
 - ✅ 5 industry templates
 - ✅ 3 loyalty rule types
 - ✅ Staging environment deployed
 - ✅ Beta customers onboarded (10-20)
+
+**Wallet Features (v2.0.0)**:
+- ✅ Store Credit as loyalty reward (CASHBACK reward type)
+- ✅ Digital Gift Cards as loyalty reward (DIGITAL_GIFT reward type)
+- ✅ Multi-currency support (8 ASEAN currencies)
+- ✅ Multi-tender redemption (combine balance types)
+- ✅ ASEAN compliance (Cambodia, Singapore focus)
 
 ## Phase 2: Enhanced Features (Months 4-6)
 
@@ -303,6 +327,22 @@ gantt
 - [ ] Notification templates
 - [ ] Notification preferences
 - [ ] Notification analytics (open rates, click rates)
+
+**Content Management** (Weeks 23-24) **NEW v2.0.0**
+- [ ] Content library for marketing assets
+- [ ] Template management (email, SMS, push)
+- [ ] Dynamic content personalization
+- [ ] A/B testing content variations
+- [ ] Content scheduling and publishing
+- [ ] Multi-language content support
+
+**Viral Growth Mechanics - Phase 1** (Weeks 23-24) **NEW v2.0.0**
+- [ ] Basic referral tracking
+- [ ] Referral code generation
+- [ ] Dual-sided rewards (referrer + referee)
+- [ ] Share buttons (social media integration)
+- [ ] Viral loop analytics
+- [ ] Fraud detection (duplicate referrals)
 
 ### Mobile App (React Native) (Weeks 13-24)
 
@@ -371,6 +411,8 @@ gantt
 - ✅ Partner network
 - ✅ Advanced analytics
 - ✅ Email/SMS campaigns
+- ✅ **NEW (v2.0.0)**: Content management system
+- ✅ **NEW (v2.0.0)**: Basic viral growth mechanics (referrals)
 - ✅ 500+ customers
 
 ## Phase 3: AI & Automation (Months 7-9)
@@ -436,6 +478,14 @@ gantt
 - [ ] Payment gateways (Stripe, PayPal)
 - [ ] Zapier integration (1,000+ apps)
 
+**Viral Growth Mechanics - Phase 2** (Weeks 34-36) **NEW v2.0.0**
+- [ ] Advanced referral campaigns (milestone-based)
+- [ ] Viral loops (invite 3 friends, get bonus)
+- [ ] Social sharing incentives
+- [ ] Influencer partnership program
+- [ ] Viral coefficient tracking (K-factor)
+- [ ] Network effects analytics
+
 ### Web Frontend Enhancements (Weeks 25-36)
 
 **AI Features UI** (Weeks 25-28)
@@ -464,6 +514,7 @@ gantt
 - ✅ Workflow automation engine
 - ✅ Visual workflow builder
 - ✅ 10+ integrations
+- ✅ **NEW (v2.0.0)**: Advanced viral growth mechanics
 - ✅ 1,500+ customers
 
 ## Phase 4: Blockchain (Months 10-12)
@@ -553,11 +604,50 @@ gantt
 - ✅ Multi-chain support (3 chains)
 - ✅ 2,500+ customers
 
-## Phase 5: Enterprise (Year 2)
+## Phase 5: Social & Community + Enterprise (Year 2)
 
 **Timeline**: Month 13-18
-**Goal**: Enterprise-ready platform with advanced features
-**Target**: 5,000 customers, 10 enterprise clients
+**Goal**: Social-first loyalty platform + Enterprise-ready features
+**Target**: 5,000 customers, 10 enterprise clients, 50% Gen Z customer base
+
+### Social & Community Features **NEW v2.0.0**
+
+**Social Feed & Sharing** (Month 13-14)
+- [ ] Instagram-style social feed
+- [ ] Share purchases, rewards, achievements
+- [ ] Like, comment, react on posts
+- [ ] User-generated content (UGC)
+- [ ] Content moderation (AI + manual)
+- [ ] Social graph (friends, followers)
+
+**Group Challenges & Gamification** (Month 14-15)
+- [ ] Team-based challenges (buy 50 coffees as a group)
+- [ ] Leaderboards (global, friends, local)
+- [ ] Social badges and achievements
+- [ ] Challenge creation tools (businesses create custom challenges)
+- [ ] Real-time challenge progress tracking
+- [ ] Challenge rewards distribution
+
+**Gifting & Social Commerce** (Month 15-16)
+- [ ] Send rewards to friends/family
+- [ ] Gift points or store credit
+- [ ] Social wish lists (customers save favorite rewards)
+- [ ] Group purchases (split bills for rewards)
+- [ ] Gift card purchases for others
+
+**Influencer & Community Programs** (Month 16-17)
+- [ ] Micro-influencer partnerships
+- [ ] Brand ambassador programs
+- [ ] Community events (virtual & in-person)
+- [ ] Exclusive community perks
+- [ ] Influencer analytics dashboard
+
+**Social Integration** (Month 17-18)
+- [ ] Instagram integration (share to Stories)
+- [ ] TikTok integration (challenge videos)
+- [ ] Facebook integration (share achievements)
+- [ ] Twitter/X integration (social proof)
+- [ ] WhatsApp sharing (invite friends)
 
 ### Enterprise Features
 
@@ -703,10 +793,11 @@ Each feature is scored 1-5 on:
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
 | 2025-11-06 | 1.0.0 | Initial roadmap | Ploy Lab |
+| 2025-11-09 | 2.0.0 | Added Unified Wallet (Phase 1), Content Management (Phase 2), Viral Growth mechanics (Phase 2-3), Social & Community features (Phase 5) | Claude Code |
 
 ---
 
 **Document Owner**: Product Team
 **Review Cycle**: Monthly
-**Last Review**: 2025-11-06
-**Next Review**: 2025-12-06
+**Last Review**: 2025-11-09
+**Next Review**: 2025-12-09

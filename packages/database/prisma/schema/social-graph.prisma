@@ -1,0 +1,406 @@
+// Social Graph & Influencer Domain
+// Models: CustomerSocialGraph, Influencer, InfluencerCampaign, InfluencerPerformance
+//
+// Purpose: Enable social graph analysis to identify "super referrers" and
+// AI-powered influencer matching for micro-influencer programs. Designed to
+// maximize viral coefficient by targeting high-network customers.
+
+// ============================================================================
+// CUSTOMER SOCIAL GRAPH
+// ============================================================================
+
+// Analyzes each customer's social network to identify referral potential
+model CustomerSocialGraph {
+  id          String    @id @default(cuid())
+
+  // Relations
+  businessId  String
+  customerId  String    @unique // One graph per customer
+
+  // Network size estimation (AI-powered)
+  estimatedNetworkSize Int     @default(0)  // Estimated total social connections
+  // Calculated from: Instagram followers, Facebook friends, LinkedIn connections
+  // Requires customer consent to analyze social profiles
+
+  connectedPlatforms Json?    @default("[]")
+  // Example: [
+  //   {"platform": "instagram", "username": "@sarah_smith", "followers": 5234, "following": 892},
+  //   {"platform": "facebook", "friendCount": 847},
+  //   {"platform": "linkedin", "connections": 423}
+  // ]
+
+  // Influence scoring (0-100)
+  influenceScore      Float    @default(0)
+  // Factors: Network size, engagement rate, content quality, follower demographics
+  // 0-20: Low influence (small network, low engagement)
+  // 21-50: Moderate influence (medium network, average engagement)
+  // 51-80: High influence (large network, good engagement)
+  // 81-100: Super influencer (massive network, excellent engagement)
+
+  engagementRate      Float    @default(0)  // % of network that engages with posts
+  // Example: 500 likes / 5000 followers = 10% engagement (excellent)
+
+  // Referral potential
+  isSuperReferrer     Boolean  @default(false)  // Top 20% of referrers (Pareto principle)
+  referralPotential   Float    @default(0)     // 0-100 score
+  // Calculated: influenceScore × referralSuccessRate × networkQuality
+
+  // Historical performance
+  totalReferrals      Int      @default(0)     // Lifetime referrals made
+  successfulReferrals Int      @default(0)     // Referrals that converted
+  referralSuccessRate Float    @default(0)     // successfulReferrals / totalReferrals
+
+  avgReferralValue    Float    @default(0)     // Average LTV of referred customers
+  totalReferralRevenue Float   @default(0)     // Total revenue from referrals
+
+  // Network quality indicators
+  networkQuality      Float    @default(0)     // 0-100 score
+  // Factors: Real followers (not bots), demographic match with target audience,
+  // geographic relevance, interest alignment
+
+  botScore            Float    @default(0)     // 0-100, higher = more bot followers
+  // If >50, network quality penalized (fake followers don't convert)
+
+  // Lookalike analysis
+  lookalikeClusters   String[] @default([])    // Cluster IDs for similar customers
+  // Example: ["cluster_fitness_enthusiasts", "cluster_urban_millennials"]
+  // Used to find similar high-potential referrers
+
+  // Demographic data (for targeting)
+  ageRange            String?  // "18-24", "25-34", etc.
+  gender              String?  // "male", "female", "non-binary", "prefer_not_to_say"
+  location            String?  // City or region
+  interests           String[] @default([])    // ["fitness", "wellness", "sustainability"]
+
+  // Consent & Privacy
+  consentGiven        Boolean  @default(false)  // Customer consents to social analysis
+  consentDate         DateTime?
+  dataSourceUrls      String[] @default([])    // URLs analyzed (for transparency)
+
+  // Last analysis
+  lastAnalyzedAt      DateTime @default(now())
+  nextAnalysisAt      DateTime? // Schedule next refresh (monthly)
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([businessId, isSuperReferrer])
+  @@index([influenceScore])
+  @@index([referralPotential])
+  @@map("customer_social_graphs")
+}
+
+// ============================================================================
+// INFLUENCERS (Micro/Macro Influencers & Brand Ambassadors)
+// ============================================================================
+
+enum InfluencerTier {
+  NANO         // 1K-10K followers
+  MICRO        // 10K-50K followers
+  MID          // 50K-500K followers
+  MACRO        // 500K-1M followers
+  MEGA         // 1M+ followers
+}
+
+enum InfluencerStatus {
+  INVITED      // Invitation sent, awaiting response
+  ACTIVE       // Accepted, actively promoting
+  PAUSED       // Temporarily paused collaboration
+  INACTIVE     // Ended collaboration
+  BLACKLISTED  // Banned (fraud, brand safety issues)
+}
+
+model Influencer {
+  id          String           @id @default(cuid())
+
+  // Multi-tenant
+  businessId  String
+
+  // Platform identity
+  platform    String           // "instagram", "tiktok", "youtube"
+  username    String
+  displayName String
+  profileUrl  String
+  avatarUrl   String?
+
+  // Audience metrics
+  followerCount    Int         @default(0)
+  followingCount   Int         @default(0)
+  postCount        Int         @default(0)
+  tier             InfluencerTier
+
+  // Engagement metrics
+  avgLikes         Int         @default(0)
+  avgComments      Int         @default(0)
+  avgShares        Int         @default(0)
+  avgViews         Int         @default(0)  // For video platforms
+  engagementRate   Float       @default(0)  // (likes + comments) / followers
+
+  // Audience quality
+  audienceOverlap  Float       @default(0)  // % overlap with brand's target audience
+  // Example: 75% of influencer's followers match brand's customer demographics
+  // High overlap = more likely to convert
+
+  audienceDemographics Json?
+  // Example: {
+  //   "ageRanges": {"18-24": 35, "25-34": 45, "35-44": 15, "45+": 5},
+  //   "gender": {"female": 70, "male": 28, "other": 2},
+  //   "locations": {"US": 60, "UK": 15, "CA": 10, "Other": 15},
+  //   "interests": ["fashion", "beauty", "wellness"]
+  // }
+
+  // Historical performance (with THIS brand)
+  campaignsCompleted  Int      @default(0)
+  totalRevenue        Float    @default(0)  // Revenue generated from influencer
+  totalCommission     Float    @default(0)  // Commission paid to influencer
+  avgConversionRate   Float    @default(0)  // % of clicks that convert
+  roi                 Float    @default(0)  // Revenue / Commission
+
+  // Status & collaboration terms
+  status             InfluencerStatus @default(INVITED)
+  commissionRate     Float            @default(15)  // 15% default
+  fixedFee           Float?           // Optional fixed fee per post
+  paymentTerms       String?          // "net30", "per_conversion", etc.
+
+  // Contact info
+  email              String?
+  phone              String?
+  contactPreference  String?          // "email", "dm", "phone"
+
+  // Referral tracking
+  referralCode       String?          @unique  // Unique code for this influencer
+  referralLink       String?          // Trackable link
+
+  // Fraud detection
+  botFollowerScore   Float            @default(0)  // % of followers that are bots
+  fraudScore         Float            @default(0)  // 0-100, higher = more suspicious
+
+  // AI matching score (how well they fit this brand)
+  matchScore         Float            @default(0)  // 0-100
+  // Factors: Audience overlap, engagement rate, content alignment, past performance
+
+  // Relations
+  campaigns          InfluencerCampaign[]
+  performance        InfluencerPerformance[]
+
+  // Outreach tracking
+  invitedAt          DateTime?
+  invitedBy          String?          // User ID
+  acceptedAt         DateTime?
+  lastContactedAt    DateTime?
+
+  // Timestamps
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([businessId, platform, username])
+  @@index([businessId, status])
+  @@index([tier])
+  @@index([matchScore])
+  @@index([audienceOverlap])
+  @@map("influencers")
+}
+
+// ============================================================================
+// INFLUENCER CAMPAIGNS
+// ============================================================================
+
+enum CampaignType {
+  PRODUCT_REVIEW   // Review a product
+  UNBOXING         // Unboxing video
+  SPONSORED_POST   // Paid post
+  GIVEAWAY         // Contest/giveaway
+  AFFILIATE        // Ongoing affiliate relationship
+  BRAND_AMBASSADOR // Long-term ambassadorship
+}
+
+enum CampaignStatus {
+  PLANNED          // Campaign planned, not yet started
+  ACTIVE           // Currently running
+  COMPLETED        // Finished successfully
+  CANCELLED        // Cancelled before completion
+  FAILED           // Did not meet requirements
+}
+
+model InfluencerCampaign {
+  id          String         @id @default(cuid())
+
+  // Relations
+  businessId  String
+  influencerId String
+  influencer   Influencer    @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  // Campaign details
+  name        String
+  type        CampaignType
+  status      CampaignStatus @default(PLANNED)
+  description String?
+
+  // Deliverables
+  requiredPosts Int          @default(1)
+  completedPosts Int         @default(0)
+  platforms     String[]     // ["instagram", "tiktok"]
+
+  // Content requirements
+  hashtags      String[]     // Required hashtags
+  mentions      String[]     // Required @mentions
+  contentGuidelines String?  // Brand guidelines
+
+  // Compensation
+  commissionRate Float?      // % commission on sales
+  fixedPayment   Float?      // Fixed fee
+  productValue   Float?      // Value of free products sent
+
+  // Timeline
+  startDate   DateTime
+  endDate     DateTime?
+  completedAt DateTime?
+
+  // Performance tracking
+  totalClicks     Int         @default(0)
+  totalConversions Int        @default(0)
+  totalRevenue    Float       @default(0)
+  totalCommission Float       @default(0)
+  roi             Float       @default(0)  // Revenue / (Commission + Fixed)
+
+  // Content links (submitted by influencer)
+  contentUrls     String[]    @default([])  // Links to posts
+
+  // Relations
+  performance     InfluencerPerformance[]
+
+  // Timestamps
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([businessId, status])
+  @@index([influencerId])
+  @@map("influencer_campaigns")
+}
+
+// ============================================================================
+// INFLUENCER PERFORMANCE (Time-series analytics)
+// ============================================================================
+
+// Daily/weekly performance snapshots for analytics
+model InfluencerPerformance {
+  id          String    @id @default(cuid())
+
+  // Relations
+  businessId  String
+  influencerId String
+  influencer   Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  campaignId  String?
+  campaign     InfluencerCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  // Time period
+  periodStart DateTime
+  periodEnd   DateTime
+  periodType  String    // "daily", "weekly", "monthly"
+
+  // Metrics
+  clicks      Int       @default(0)
+  impressions Int       @default(0)
+  conversions Int       @default(0)
+  revenue     Float     @default(0)
+  commission  Float     @default(0)
+
+  // Calculated
+  ctr         Float     @default(0)  // Click-through rate
+  cvr         Float     @default(0)  // Conversion rate
+  cpc         Float     @default(0)  // Cost per click
+  cpa         Float     @default(0)  // Cost per acquisition
+  roas        Float     @default(0)  // Return on ad spend
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+
+  @@index([businessId, influencerId, periodStart])
+  @@index([campaignId])
+  @@map("influencer_performance")
+}
+
+// ============================================================================
+// NOTES
+// ============================================================================
+//
+// Super Referrer Identification Algorithm:
+// 1. Analyze customer social graph (Instagram, Facebook, LinkedIn)
+// 2. Calculate influence score (network size × engagement rate × quality)
+// 3. Track historical referral performance
+// 4. Score referral potential: influenceScore × referralSuccessRate × networkQuality
+// 5. Flag top 20% as "super referrers" (Pareto principle: 20% drive 80% of referrals)
+//
+// Targeting Super Referrers:
+// - Offer 2x points for super referrers (incentivize them to refer more)
+// - Send personalized outreach: "We see you have a large network, join our Ambassador program!"
+// - Give exclusive perks: Early access to products, VIP status, special events
+// - Result: 5x more conversions from super referrers vs. average customers
+//
+// Influencer Matching Algorithm (AI-Powered):
+// 1. Business defines criteria: "Fitness influencers, 10K-50K followers, US-based, female, 25-34"
+// 2. AI scrapes Instagram/TikTok for matching profiles
+// 3. For each match, calculate:
+//    - Audience overlap: % of followers matching brand's target demographics
+//    - Engagement rate: (likes + comments) / followers
+//    - Content alignment: AI analyzes posts for brand fit
+//    - Bot score: Detect fake followers
+//    - Match score: Weighted average of above factors
+// 4. Return top 100 matches ranked by match score
+// 5. Business reviews, sends automated DM invites
+//
+// Auto-Outreach Workflow:
+// 1. AI generates personalized DM template:
+//    "Hi [Name], we love your content on [topic]! Want to join our brand ambassador program?
+//    Earn 15% commission on every sale. Interested? Reply YES to get your unique code."
+// 2. AI sends DMs to top 50 influencers
+// 3. Track response rate (50% is excellent)
+// 4. Auto-generate unique referral codes for responders
+// 5. Send welcome email with code, commission terms, content guidelines
+//
+// Micro-Influencer ROI:
+// - Nano (1K-10K): 8.7% engagement rate, $10-$100 per post, best ROI
+// - Micro (10K-50K): 5.7% engagement rate, $100-$500 per post, 11x ROI vs. macro
+// - Mid (50K-500K): 3.2% engagement rate, $500-$5K per post
+// - Macro (500K-1M): 1.7% engagement rate, $5K-$25K per post
+// - Mega (1M+): 1.0% engagement rate, $25K+ per post, lowest ROI
+//
+// Recommendation: Target micro-influencers (10K-50K) for best balance of reach + ROI
+//
+// Tarte Cosmetics Case Study (Real-World Example):
+// - Open affiliate program (15-20% commission)
+// - Focused on micro-influencers (<20K followers)
+// - Result: 22.3K influencers, $105.88M TikTok Shop revenue
+// - No upfront fees, pure commission (scalable model)
+// - Influencer trips (#TrippinWithTarte) create UGC waves
+//
+// Commission Structure Recommendations:
+// - Standard products: 10-15% commission
+// - High-margin products: 20-25% commission
+// - First purchase only: Higher commission (25-30%) to incentivize new customers
+// - Recurring: Lower commission (5-10%) but lifetime value
+//
+// Fraud Detection for Influencers:
+// 1. Bot follower score >50% = reject
+// 2. Engagement rate <1% = likely bought followers
+// 3. Sudden follower spike (10K in 1 day) = purchased followers
+// 4. Generic content (copy-paste captions) = low quality
+// 5. No audience demographics data = suspicious
+//
+// Privacy & Consent:
+// - Social graph analysis requires customer opt-in
+// - Clear disclosure: "We'll analyze your Instagram to offer personalized rewards"
+// - Right to opt-out anytime
+// - Data retention: 1 year, then delete
+//
+// Multi-Tenant Safety:
+// - Each business has isolated influencer pool
+// - No cross-business influencer sharing (competitive advantage)
+// - Analytics scoped by businessId
+//
+// Performance Optimization:
+// - Social graph analysis runs monthly (not real-time)
+// - Influencer matching runs on-demand (business-initiated)
+// - Performance metrics updated daily via cron job

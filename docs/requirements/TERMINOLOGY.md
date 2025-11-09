@@ -15,10 +15,13 @@
 7. [Partner Network Terms](#partner-network-terms)
 8. [Subscription Terms](#subscription-terms)
 9. [Referral Terms](#referral-terms)
-10. [Blockchain/NFT Terms](#blockchainnft-terms)
-11. [Technical Terms](#technical-terms)
-12. [Analytics Terms](#analytics-terms)
-13. [Industry Variations](#industry-variations)
+10. **[Viral Growth Terms](#viral-growth-terms)** ← NEW (v2.0.0)
+11. **[Content Management Terms](#content-management-terms)** ← NEW (v2.0.0)
+12. **[Social & Community Terms](#social--community-terms)** ← NEW (v2.0.0)
+13. [Blockchain/NFT Terms](#blockchainnft-terms)
+14. [Technical Terms](#technical-terms)
+15. [Analytics Terms](#analytics-terms)
+16. [Industry Variations](#industry-variations)
 
 ---
 
@@ -456,6 +459,384 @@ interface IndustryTerms {
 
 ---
 
+## Viral Growth Terms
+
+**NEW (v2.0.0)**: Viral growth mechanics for exponential customer acquisition.
+
+### Core Viral Growth Concepts
+
+- **Viral Growth**: Customer acquisition through existing customers inviting new customers
+- **Viral Loop**: Self-reinforcing cycle where users invite more users who invite more users
+- **K-Factor (Viral Coefficient)**: Number of new users each existing user brings in (K>1 = exponential growth)
+- **Viral Mechanics**: Built-in features that incentivize sharing and referrals
+- **Organic Growth**: Customer acquisition without paid advertising
+
+### Referral Program Terms
+
+**Definition**: System for tracking and rewarding customer referrals
+
+**Customer Facing**:
+- "Refer a friend and you both earn rewards"
+- "Share your referral code to earn bonus points"
+- "Invite friends to unlock exclusive rewards"
+
+**Technical Terms**:
+- **Referral Code**: Unique code assigned to each customer for tracking
+- **Referral Link**: Shareable URL with embedded tracking code
+- **Referrer**: Customer who invites others
+- **Referee**: New customer from referral
+- **Dual-Sided Reward**: Both referrer and referee earn rewards
+- **Referral Completion**: When referee meets criteria (signup, first purchase, spend threshold)
+- **Completion Criteria**: Requirements for reward issuance
+- **Referral Attribution**: Tracking which referrer brought which customer
+- **Fraud Detection**: Prevention of self-referrals, bot referrals, abuse
+
+**Reward Structures**:
+- **Fixed Reward**: "$10 credit for each referral"
+- **Tiered Reward**: "1st referral = $5, 5th referral = $25"
+- **Milestone Reward**: "Refer 10 friends, unlock VIP status"
+- **Percentage Reward**: "10% of referee's first purchase"
+
+### Viral Sharing Terms
+
+**Definition**: Social sharing features that amplify reach
+
+**Customer Facing**:
+- "Share your achievement on social media"
+- "Post your free coffee to Instagram"
+- "Tell your friends about this reward"
+
+**Technical Terms**:
+- **Share Button**: UI element for social media sharing
+- **Share Rate**: Percentage of transactions shared socially
+- **Social Proof**: Displaying user activity to build trust
+- **Viral Content**: User-generated posts that drive signups
+- **Share Template**: Pre-formatted text/image for social posts
+- **Deep Link**: Link that opens app directly to specific screen
+
+**Social Platforms**:
+- **Instagram Stories**: Share to Instagram Stories
+- **Facebook**: Share to Facebook feed
+- **Twitter/X**: Share to Twitter/X feed
+- **WhatsApp**: Share via WhatsApp message
+- **Native Share**: OS-native share sheet
+
+### Viral Loop Analytics Terms
+
+**Definition**: Metrics for measuring viral growth effectiveness
+
+**Technical Terms**:
+- **Viral Coefficient (K)**: K = (invites sent per user) × (conversion rate)
+- **Cycle Time**: Average time for one viral loop iteration
+- **Viral Lift**: Increase in signups attributed to viral features
+- **Share-to-Signup Rate**: Percentage of shares resulting in signups
+- **Referral Conversion Rate**: Percentage of referred users who complete criteria
+- **Viral Funnel**: Stages from share → click → signup → completion
+- **Drop-off Rate**: Percentage lost at each funnel stage
+
+**Customer Facing Messages**:
+- "You've referred 5 friends this month!"
+- "Your referrals have earned you $50 in rewards"
+- "Top referrer: [Name] with 23 referrals"
+
+### Gamification & Viral Mechanics Terms
+
+**Definition**: Game-like features that drive engagement and sharing
+
+**Technical Terms**:
+- **Leaderboard**: Ranking of top referrers
+- **Challenge**: Time-bound goal with rewards
+- **Achievement Badge**: Digital badge for milestones
+- **Streak**: Consecutive days/weeks of activity
+- **Milestone**: Significant threshold (10 referrals, 50 purchases, etc.)
+- **Progress Bar**: Visual representation of progress toward goal
+- **Social Proof Counter**: "1,247 customers joined this week"
+
+**Customer Facing**:
+- "You're #3 on the referral leaderboard!"
+- "Challenge: Refer 3 friends this week for bonus reward"
+- "Achievement unlocked: Referral Champion"
+
+### Fraud Prevention Terms
+
+**Definition**: Systems to detect and prevent referral abuse
+
+**Technical Terms**:
+- **Self-Referral Detection**: Identifying customers referring themselves
+- **Duplicate Account Detection**: Same user creating multiple accounts
+- **Bot Detection**: Identifying automated referral generation
+- **IP Address Tracking**: Detecting referrals from same location
+- **Device Fingerprinting**: Identifying devices for duplicate detection
+- **Referral Velocity Check**: Flagging abnormally high referral rates
+- **Manual Review Queue**: Suspicious referrals pending human review
+
+**System Actions**:
+- **Flagged Referral**: Suspicious activity requiring review
+- **Blocked Referral**: Invalid referral that won't earn rewards
+- **Account Suspension**: Temporary lock for abuse
+- **Reward Clawback**: Removing fraudulently earned rewards
+
+---
+
+## Content Management Terms
+
+**NEW (v2.0.0)**: Content library and personalization system.
+
+### Core Content Concepts
+
+- **Content Management System (CMS)**: Platform for creating, managing, and publishing marketing content
+- **Content Library**: Repository of templates, assets, and campaigns
+- **Dynamic Content**: Personalized content based on customer data
+- **Content Personalization**: Tailoring messages to individual customers
+- **Content Template**: Pre-designed format for campaigns
+
+### Template Management Terms
+
+**Definition**: Library of pre-built campaign templates
+
+**Customer Facing**:
+- "Get notified about exclusive offers"
+- "Personalized recommendations just for you"
+- "Special birthday reward inside!"
+
+**Technical Terms**:
+- **Email Template**: Pre-designed email layout
+- **SMS Template**: Pre-written SMS message format
+- **Push Notification Template**: Pre-configured push message
+- **In-App Message Template**: Pop-up or banner message design
+- **Template Variable**: Placeholder for dynamic content ({{firstName}}, {{points}})
+- **Template Category**: Grouping (welcome, birthday, win-back, promotional)
+- **Template Version**: Iteration of template design
+- **Template Library**: Collection of all available templates
+
+**Template Types**:
+- **Welcome Campaign**: Onboarding new customers
+- **Birthday Campaign**: Birthday month rewards
+- **Win-Back Campaign**: Re-engaging inactive customers
+- **Milestone Campaign**: Celebrating achievements
+- **Promotional Campaign**: Limited-time offers
+- **Tier Upgrade Campaign**: Celebrating tier progression
+
+### A/B Testing Terms
+
+**Definition**: Comparing two content variations to optimize performance
+
+**Technical Terms**:
+- **A/B Test**: Experiment comparing two variants
+- **Control Group**: Baseline version (A)
+- **Variant**: Alternative version (B, C, etc.)
+- **Test Population**: Customers included in test
+- **Split Ratio**: Distribution of traffic (50/50, 80/20, etc.)
+- **Statistical Significance**: Confidence level in results
+- **Winning Variant**: Best-performing version
+- **Conversion Rate**: Percentage completing desired action
+- **Test Duration**: Time period for experiment
+
+**Measurable Outcomes**:
+- **Open Rate**: Percentage opening email/push notification
+- **Click-Through Rate (CTR)**: Percentage clicking link
+- **Conversion Rate**: Percentage completing goal (redemption, purchase)
+- **Engagement Rate**: Percentage interacting with content
+
+**Customer Facing Messages**:
+- "We're testing new features - your feedback helps us improve!"
+
+### Personalization Terms
+
+**Definition**: Tailoring content to individual customer preferences and behavior
+
+**Technical Terms**:
+- **Personalization Engine**: System generating custom content
+- **Customer Segment**: Group with shared characteristics
+- **Behavioral Trigger**: Action that initiates personalized message
+- **Dynamic Field**: Content that changes per customer
+- **Recommendation Algorithm**: Logic for suggesting products/rewards
+- **Personalization Lift**: Performance improvement from personalization
+- **Fallback Content**: Default content when personalization unavailable
+
+**Personalization Factors**:
+- **Purchase History**: Products previously bought
+- **Browsing Behavior**: Items viewed but not purchased
+- **Tier Status**: Current membership level
+- **Location**: Customer's physical location
+- **Time of Day**: When customer typically engages
+- **Engagement Pattern**: Frequency and recency of activity
+
+**Customer Facing**:
+- "Based on your recent purchases, we recommend..."
+- "Your favorite items are on sale"
+- "You might also like these rewards"
+
+### Multi-Language Support Terms
+
+**Definition**: Content delivery in multiple languages
+
+**Technical Terms**:
+- **Localization (L10n)**: Adapting content to local language/culture
+- **Translation**: Converting text to another language
+- **Language Code**: ISO standard (en-US, zh-CN, km-KH, etc.)
+- **Default Language**: Fallback when preferred language unavailable
+- **Language Preference**: Customer's selected language
+- **Translation Key**: Reference for translated strings
+- **Translation Management**: System for maintaining translations
+
+**Supported Languages (ASEAN Focus)**:
+- **English (en)**: Global default
+- **Khmer (km)**: Cambodia (home base)
+- **Chinese (zh)**: Singapore, regional
+- **Malay (ms)**: Singapore, Malaysia
+- **Thai (th)**: Thailand
+- **Vietnamese (vi)**: Vietnam
+- **Tagalog (tl)**: Philippines
+- **Indonesian (id)**: Indonesia
+
+**Customer Facing**:
+- "Language: [English ▼]"
+- "ភាសាខ្មែរ" (Khmer option)
+- "切换语言" (Chinese option)
+
+---
+
+## Social & Community Terms
+
+**NEW (v2.0.0)**: Social features for community building and engagement (Phase 5).
+
+### Core Social Concepts
+
+- **Social Feed**: Instagram-style stream of user activity
+- **User-Generated Content (UGC)**: Photos, reviews, posts created by customers
+- **Community**: Group of engaged customers interacting with each other
+- **Social Engagement**: Likes, comments, shares, reactions
+- **Social Graph**: Network of connections between customers
+
+### Social Feed Terms
+
+**Definition**: Activity stream showing customer posts and achievements
+
+**Customer Facing**:
+- "See what others are earning"
+- "Share your latest reward"
+- "Check out the community feed"
+
+**Technical Terms**:
+- **Post**: Single item in social feed
+- **Feed Algorithm**: Logic determining post order and visibility
+- **Engagement**: Likes, comments, reactions on posts
+- **Feed Item**: Individual entry (purchase, reward, achievement)
+- **Timestamp**: When post was created
+- **Visibility**: Who can see post (public, friends, private)
+- **Post Type**: Category (purchase, reward redemption, milestone, review)
+
+**Post Elements**:
+- **Caption**: Text description
+- **Image/Photo**: Visual content
+- **Hashtag**: Categorization tag (#FreeCoffee, #LoyaltyReward)
+- **Mention**: Tagging another user (@username)
+- **Location Tag**: Business location tagged
+- **Reaction**: Like, love, celebrate, etc.
+
+### User-Generated Content (UGC) Terms
+
+**Definition**: Customer-created content showcasing products and rewards
+
+**Technical Terms**:
+- **Photo Submission**: Customer-uploaded image
+- **Review**: Written feedback on product/service
+- **Rating**: Star rating (1-5 stars)
+- **Content Moderation**: Reviewing UGC for appropriateness
+- **Moderation Queue**: Pending content awaiting approval
+- **Auto-Moderation**: AI-based content filtering
+- **Manual Review**: Human approval process
+- **Flagged Content**: User-reported inappropriate content
+
+**Content Types**:
+- **Product Photo**: Image of purchased item
+- **Reward Photo**: Image of redeemed reward
+- **Check-in Photo**: Location-based selfie
+- **Unboxing**: First-time product reveal
+- **Testimonial**: Customer success story
+
+**Customer Facing**:
+- "Share a photo of your reward for bonus points"
+- "Post a review to earn 50 points"
+- "Your photo was featured!"
+
+### Group Challenges & Gamification Terms
+
+**Definition**: Team-based competitions and collaborative goals
+
+**Technical Terms**:
+- **Group Challenge**: Time-bound team competition
+- **Team**: Group of customers working toward shared goal
+- **Challenge Goal**: Target to achieve (50 coffees, $1,000 spent)
+- **Progress Tracker**: Real-time view of team progress
+- **Leaderboard**: Ranking of teams or individuals
+- **Challenge Reward**: Prize for completing challenge
+- **Shared Reward**: Benefit distributed to all team members
+- **Challenge Duration**: Time limit for completion
+
+**Challenge Types**:
+- **Team Challenge**: "Buy 50 coffees as a team this month"
+- **Individual Competition**: "Top 10 customers win VIP status"
+- **Global Challenge**: "Community goal: 1,000 purchases"
+- **Streak Challenge**: "Visit 7 days in a row"
+
+**Customer Facing**:
+- "Join the Coffee Crew Challenge"
+- "Your team is 70% to the goal!"
+- "Congratulations! Challenge completed!"
+
+### Influencer Program Terms
+
+**Definition**: Partnerships with micro-influencers and brand ambassadors
+
+**Technical Terms**:
+- **Micro-Influencer**: Social media user with 1K-100K followers
+- **Brand Ambassador**: Customer representing brand
+- **Influencer Code**: Unique referral code for influencer
+- **Commission**: Percentage earned on referred sales
+- **Influencer Dashboard**: Analytics for influencer performance
+- **Partnership Agreement**: Terms of influencer relationship
+- **Content Requirement**: Posts/stories required from influencer
+- **Exclusive Perk**: Special benefit for influencers
+
+**Influencer Metrics**:
+- **Reach**: Number of followers/impressions
+- **Engagement Rate**: Percentage of followers engaging with posts
+- **Conversion Rate**: Percentage of followers becoming customers
+- **Attribution**: Tracking customers from influencer
+
+**Customer Facing**:
+- "Become a brand ambassador"
+- "Apply for our influencer program"
+- "Exclusive perks for top community members"
+
+### Gifting & Social Commerce Terms
+
+**Definition**: Sending rewards and points to friends
+
+**Technical Terms**:
+- **Gift Reward**: Transferring reward to another customer
+- **Point Transfer**: Sending points to friend
+- **Social Wish List**: Saved items friends can see
+- **Group Purchase**: Pooling money for shared reward
+- **Bill Splitting**: Dividing reward redemption among group
+- **Gift Status**: Sent, pending, accepted, declined
+- **Gift Notification**: Alert when gift received
+
+**Customer Facing**:
+- "Send a free coffee to a friend"
+- "Gift your extra points"
+- "Split this reward with your group"
+
+**Gifting Rules**:
+- **Transfer Limit**: Maximum points/rewards transferable
+- **Cooldown Period**: Time between gift transactions
+- **Eligible Recipients**: Who can receive gifts (friends, any customer)
+- **Gift Expiration**: Time limit to accept gift
+
+---
+
 ## Blockchain/NFT Terms
 
 ### Web3 Concepts (Phase 4)
@@ -770,14 +1151,15 @@ class CustomerService {
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| 2025-11-09 | 2.0.0 | Added Viral Growth, Content Management, Social & Community terms | Product Team |
 | 2025-11-06 | 1.0.0 | Initial NxLoy terminology (extracted from Ploy) | Ploy Lab |
 
 ---
 
 **Document Owner**: Product Team + Engineering Team
 **Review Cycle**: Quarterly
-**Last Review**: 2025-11-06
-**Next Review**: 2026-02-06
+**Last Review**: 2025-11-09
+**Next Review**: 2026-02-09
 
 **Note**: This terminology reference should be consulted when:
 - Writing user-facing text

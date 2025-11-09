@@ -1,12 +1,18 @@
 # Loyalty Domain - Repositories
 
 **Domain**: Loyalty
-**Last Updated**: 2025-11-07
-**Author**: Ploy Lab (NxLoy Platform)
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)
 
 ## Overview
 
 Repositories provide an abstraction over data persistence, allowing aggregates to be stored and retrieved without domain logic knowing about database details.
+
+**v2.0.0 Changes**:
+- Added StoreCreditRepository for store credit aggregate persistence
+- Added DigitalRewardRepository for digital reward aggregate persistence
+- Added WalletBalanceRepository (read-only, virtual aggregate)
+- Added indexes for FIFO redemption queries
 
 ## Repository Pattern Principles
 
@@ -401,6 +407,506 @@ interface TierRepository {
 
 ---
 
+## Wallet Repositories (NEW v2.0.0)
+
+### 6. StoreCreditRepository
+
+**Purpose**: Persist and retrieve StoreCredit aggregates
+
+```typescript
+interface StoreCreditRepository {
+  // Basic CRUD
+  findById(id: UUID): Promise<StoreCreditAggregate | null>;
+  save(credit: StoreCreditAggregate): Promise<void>;
+
+  // Query methods
+  findActive(filter: StoreCreditFilter): Promise<StoreCredit[]>;
+  findByCustomer(customerId: UUID): Promise<StoreCredit[]>;
+  findExpiring(before: Date): Promise<StoreCredit[]>;
+  findInGracePeriod(): Promise<StoreCredit[]>;
+
+  // Balance methods (for wallet)
+  getBalance(customerId: UUID, currency?: string): Promise<MultiCurrencyBalance>;
+  getTotalBalance(customerId: UUID): Promise<Money[]>; // All currencies
+
+  // Aggregation methods
+  sumBalanceByCustomer(customerId: UUID, currency: string): Promise<Money>;
+  countActiveByCustomer(customerId: UUID): Promise<number>;
+}
+
+interface StoreCreditFilter {
+  customerId: UUID;
+  currency: string;
+  sortBy: 'expires_at ASC' | 'created_at DESC'; // FIFO or chronological
+  status?: CreditStatus[];
+}
+```
+
+**Implementation**:
+
+```typescript
+class PrismaStoreCreditRepository implements StoreCreditRepository {
+  constructor(private prisma: PrismaClient) {}
+
+  async findActive(filter: StoreCreditFilter): Promise<StoreCredit[]> {
+    const credits = await this.prisma.storeCredit.findMany({
+      where: {
+        customerId: filter.customerId,
+        currency: filter.currency,
+        status: filter.status || {
+          in: [CreditStatus.ACTIVE, CreditStatus.EXPIRED]
+        },
+        balance: { gt: 0 }, // Only credits with balance
+      },
+      include: {
+        transactions: {
+          orderBy: { transactionDate: 'desc' },
+          take: 10
+        }
+      },
+      orderBy: this.getSortOrder(filter.sortBy),
+    });
+
+    return credits.map(c => this.toDomain(c));
+  }
+
+  async getBalance(
+    customerId: UUID,
+    currency?: string
+  ): Promise<MultiCurrencyBalance> {
+    const where: any = {
+      customerId,
+      status: { in: [CreditStatus.ACTIVE, CreditStatus.EXPIRED] },
+      balance: { gt: 0 }
+    };
+
+    if (currency) {
+      where.currency = currency;
+    }
+
+    const balances = await this.prisma.storeCredit.groupBy({
+      by: ['currency'],
+      where,
+      _sum: {
+        balance: true
+      }
+    });
+
+    return new MultiCurrencyBalance(
+      balances.map(b => new Money(b._sum.balance || 0, b.currency as Currency))
+    );
+  }
+
+  async save(credit: StoreCreditAggregate): Promise<void> {
+    const data = this.toPersistence(credit);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Save store credit
+      await tx.storeCredit.upsert({
+        where: { id: credit.id },
+        create: data.credit,
+        update: data.credit
+      });
+
+      // Save new transactions
+      if (data.newTransactions.length > 0) {
+        await tx.storeCreditTransaction.createMany({
+          data: data.newTransactions,
+          skipDuplicates: true
+        });
+      }
+
+      // Publish domain events
+      const events = credit.getDomainEvents();
+      if (events.length > 0) {
+        await this.eventBus.publishAll(events);
+        credit.clearDomainEvents();
+      }
+    });
+  }
+
+  async findExpiring(before: Date): Promise<StoreCredit[]> {
+    const credits = await this.prisma.storeCredit.findMany({
+      where: {
+        expiresAt: { lte: before },
+        status: CreditStatus.ACTIVE,
+        balance: { gt: 0 }
+      },
+      include: {
+        transactions: true
+      }
+    });
+
+    return credits.map(c => this.toDomain(c));
+  }
+
+  async findInGracePeriod(): Promise<StoreCredit[]> {
+    const now = new Date();
+
+    const credits = await this.prisma.storeCredit.findMany({
+      where: {
+        status: CreditStatus.EXPIRED,
+        gracePeriodEndsAt: { gt: now },
+        balance: { gt: 0 }
+      },
+      include: {
+        transactions: true
+      }
+    });
+
+    return credits.map(c => this.toDomain(c));
+  }
+
+  private getSortOrder(sortBy: string): any {
+    if (sortBy === 'expires_at ASC') {
+      return { expiresAt: 'asc' }; // FIFO
+    }
+    return { createdAt: 'desc' };
+  }
+
+  private toDomain(raw: any): StoreCredit {
+    // Map database row to domain entity
+  }
+
+  private toPersistence(credit: StoreCreditAggregate): any {
+    // Map domain aggregate to database format
+    return {
+      credit: {
+        id: credit.id,
+        businessId: credit.businessId,
+        customerId: credit.customerId,
+        amount: credit.amount.amount,
+        currency: credit.currency,
+        balance: credit.balance.amount,
+        method: credit.method,
+        reason: credit.reason,
+        issuedBy: credit.issuedBy,
+        issuedAt: credit.issuedAt,
+        expiresAt: credit.expiresAt,
+        gracePeriodEndsAt: credit.gracePeriodEndsAt,
+        status: credit.status,
+        campaignId: credit.campaignId,
+        rewardId: credit.rewardId,
+        metadata: credit.metadata,
+        updatedAt: new Date()
+      },
+      newTransactions: credit.getNewTransactions().map(t => ({
+        id: t.id,
+        businessId: t.businessId,
+        creditId: credit.id,
+        customerId: credit.customerId,
+        type: t.type,
+        amount: t.amount.amount,
+        currency: t.currency,
+        balanceAfter: t.balanceAfter.amount,
+        externalTransactionId: t.externalTransactionId,
+        metadata: t.metadata,
+        transactionDate: t.transactionDate,
+        createdAt: t.createdAt
+      }))
+    };
+  }
+}
+```
+
+---
+
+### 7. DigitalRewardRepository
+
+**Purpose**: Persist and retrieve DigitalReward aggregates
+
+```typescript
+interface DigitalRewardRepository {
+  // Basic CRUD
+  findById(id: UUID): Promise<DigitalRewardAggregate | null>;
+  save(reward: DigitalRewardAggregate): Promise<void>;
+
+  // Query methods
+  findActive(filter: DigitalRewardFilter): Promise<DigitalReward[]>;
+  findByCustomer(customerId: UUID): Promise<DigitalReward[]>;
+  findByMerchant(merchantId: UUID): Promise<DigitalReward[]>;
+  findExpiring(before: Date): Promise<DigitalReward[]>;
+  findInGracePeriod(): Promise<DigitalReward[]>;
+
+  // Balance methods (for wallet)
+  getBalance(customerId: UUID, currency?: string): Promise<MultiCurrencyBalance>;
+  getBalanceByMerchant(
+    customerId: UUID,
+    merchantId: string,
+    currency: string
+  ): Promise<Money>;
+
+  // Aggregation methods
+  sumBalanceByCustomer(customerId: UUID, currency: string): Promise<Money>;
+  countActiveByCustomer(customerId: UUID): Promise<number>;
+}
+
+interface DigitalRewardFilter {
+  customerId: UUID;
+  currency: string;
+  merchantId?: string;
+  sortBy: 'merchant_priority' | 'expires_at ASC' | 'created_at DESC';
+  status?: RewardStatus[];
+}
+```
+
+**Implementation**:
+
+```typescript
+class PrismaDigitalRewardRepository implements DigitalRewardRepository {
+  constructor(private prisma: PrismaClient) {}
+
+  async findActive(filter: DigitalRewardFilter): Promise<DigitalReward[]> {
+    const rewards = await this.prisma.digitalReward.findMany({
+      where: {
+        customerId: filter.customerId,
+        currency: filter.currency,
+        status: filter.status || {
+          in: [RewardStatus.ACTIVE, RewardStatus.EXPIRED]
+        },
+        balance: { gt: 0 },
+        // Filter by merchant if specified
+        ...(filter.merchantId && {
+          OR: [
+            { merchantId: filter.merchantId }, // Exact match
+            { merchantId: null }                // Generic rewards
+          ]
+        })
+      },
+      include: {
+        transactions: {
+          orderBy: { transactionDate: 'desc' },
+          take: 10
+        }
+      },
+      orderBy: this.getSortOrder(filter.sortBy, filter.merchantId),
+    });
+
+    return rewards.map(r => this.toDomain(r));
+  }
+
+  async getBalanceByMerchant(
+    customerId: UUID,
+    merchantId: string,
+    currency: string
+  ): Promise<Money> {
+    const result = await this.prisma.digitalReward.aggregate({
+      where: {
+        customerId,
+        currency,
+        status: { in: [RewardStatus.ACTIVE, RewardStatus.EXPIRED] },
+        balance: { gt: 0 },
+        OR: [
+          { merchantId },     // Merchant-specific
+          { merchantId: null } // Generic
+        ]
+      },
+      _sum: {
+        balance: true
+      }
+    });
+
+    return new Money(result._sum.balance || 0, currency as Currency);
+  }
+
+  async save(reward: DigitalRewardAggregate): Promise<void> {
+    const data = this.toPersistence(reward);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Save digital reward
+      await tx.digitalReward.upsert({
+        where: { id: reward.id },
+        create: data.reward,
+        update: data.reward
+      });
+
+      // Save new transactions
+      if (data.newTransactions.length > 0) {
+        await tx.digitalRewardTransaction.createMany({
+          data: data.newTransactions,
+          skipDuplicates: true
+        });
+      }
+
+      // Publish domain events
+      const events = reward.getDomainEvents();
+      if (events.length > 0) {
+        await this.eventBus.publishAll(events);
+        reward.clearDomainEvents();
+      }
+    });
+  }
+
+  private getSortOrder(sortBy: string, merchantId?: string): any {
+    if (sortBy === 'merchant_priority') {
+      // Merchant-specific first, then by expiration
+      return [
+        { merchantId: merchantId ? 'desc' : 'asc' },
+        { expiresAt: 'asc' }
+      ];
+    }
+
+    if (sortBy === 'expires_at ASC') {
+      return { expiresAt: 'asc' }; // FIFO
+    }
+
+    return { createdAt: 'desc' };
+  }
+
+  private toDomain(raw: any): DigitalReward {
+    // Map database row to domain entity
+  }
+
+  private toPersistence(reward: DigitalRewardAggregate): any {
+    // Map domain aggregate to database format
+  }
+}
+```
+
+---
+
+### 8. WalletBalanceRepository (Virtual Aggregate - Read-Only)
+
+**Purpose**: Provide unified wallet balance view across points, store credit, and digital rewards
+
+**Note**: This repository does NOT persist data - it aggregates from underlying repositories.
+
+```typescript
+interface WalletBalanceRepository {
+  // Read-only queries (no save method)
+  getBalance(customerId: UUID, businessId: UUID): Promise<WalletBalance>;
+  getBalanceByCurrency(
+    customerId: UUID,
+    businessId: UUID,
+    currency: string
+  ): Promise<WalletBalance>;
+  hasExpiringSoon(customerId: UUID, days: number): Promise<boolean>;
+  getExpiringValue(customerId: UUID, days: number): Promise<Money[]>;
+}
+```
+
+**Implementation**:
+
+```typescript
+class CompositeWalletBalanceRepository implements WalletBalanceRepository {
+  constructor(
+    private pointsService: PointsService,
+    private storeCreditRepository: StoreCreditRepository,
+    private digitalRewardRepository: DigitalRewardRepository
+  ) {}
+
+  async getBalance(
+    customerId: UUID,
+    businessId: UUID
+  ): Promise<WalletBalance> {
+    // Fetch balances from all sources in parallel
+    const [points, storeCredit, digitalRewards] = await Promise.all([
+      this.pointsService.getBalance(customerId),
+      this.storeCreditRepository.getBalance(customerId),
+      this.digitalRewardRepository.getBalance(customerId)
+    ]);
+
+    return new WalletBalance(
+      points,
+      storeCredit,
+      digitalRewards,
+      Money.zero('USD'), // Total value (calculated)
+      new Date()
+    );
+  }
+
+  async getBalanceByCurrency(
+    customerId: UUID,
+    businessId: UUID,
+    currency: string
+  ): Promise<WalletBalance> {
+    // Fetch balances for specific currency
+    const [points, storeCredit, digitalRewards] = await Promise.all([
+      this.pointsService.getBalanceByCurrency(customerId, currency),
+      this.storeCreditRepository.getBalance(customerId, currency),
+      this.digitalRewardRepository.getBalance(customerId, currency)
+    ]);
+
+    return new WalletBalance(
+      points,
+      storeCredit,
+      digitalRewards,
+      Money.zero(currency),
+      new Date()
+    );
+  }
+
+  async hasExpiringSoon(customerId: UUID, days: number): Promise<boolean> {
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + days);
+
+    // Check if any balance type has expiring items
+    const [pointsExpiring, creditsExpiring, rewardsExpiring] = await Promise.all([
+      this.pointsService.hasExpiringBefore(customerId, expiryDate),
+      this.storeCreditRepository.findExpiring(expiryDate).then(c => c.length > 0),
+      this.digitalRewardRepository.findExpiring(expiryDate).then(r => r.length > 0)
+    ]);
+
+    return pointsExpiring || creditsExpiring || rewardsExpiring;
+  }
+
+  async getExpiringValue(customerId: UUID, days: number): Promise<Money[]> {
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + days);
+
+    // Get expiring balances from all sources
+    const [pointsExpiring, creditsExpiring, rewardsExpiring] = await Promise.all([
+      this.pointsService.getExpiringValue(customerId, expiryDate),
+      this.getExpiringCreditValue(customerId, expiryDate),
+      this.getExpiringRewardValue(customerId, expiryDate)
+    ]);
+
+    // Combine by currency
+    const byCurrency = new Map<string, number>();
+
+    for (const money of [...creditsExpiring, ...rewardsExpiring]) {
+      const current = byCurrency.get(money.currency) || 0;
+      byCurrency.set(money.currency, current + money.amount);
+    }
+
+    return Array.from(byCurrency.entries()).map(
+      ([currency, amount]) => new Money(amount, currency as Currency)
+    );
+  }
+
+  private async getExpiringCreditValue(
+    customerId: UUID,
+    before: Date
+  ): Promise<Money[]> {
+    const credits = await this.storeCreditRepository.findExpiring(before);
+    return this.groupByCurrency(credits.map(c => c.balance));
+  }
+
+  private async getExpiringRewardValue(
+    customerId: UUID,
+    before: Date
+  ): Promise<Money[]> {
+    const rewards = await this.digitalRewardRepository.findExpiring(before);
+    return this.groupByCurrency(rewards.map(r => r.balance));
+  }
+
+  private groupByCurrency(balances: Money[]): Money[] {
+    const byCurrency = new Map<string, number>();
+
+    for (const money of balances) {
+      const current = byCurrency.get(money.currency) || 0;
+      byCurrency.set(money.currency, current + money.amount);
+    }
+
+    return Array.from(byCurrency.entries()).map(
+      ([currency, amount]) => new Money(amount, currency as Currency)
+    );
+  }
+}
+```
+
+---
+
 ## Repository Design Patterns
 
 ### 1. Unit of Work Pattern
@@ -513,6 +1019,48 @@ CREATE INDEX idx_transactions_expiry ON loyalty_transactions(expires_at) WHERE t
 -- LoyaltyTemplate
 CREATE INDEX idx_templates_industry ON loyalty_rule_templates(industry);
 CREATE INDEX idx_templates_popularity ON loyalty_rule_templates(popularity DESC);
+
+-- StoreCredit (NEW v2.0.0) - FIFO redemption critical path
+CREATE INDEX idx_store_credits_fifo
+  ON store_credits(customer_id, currency, expires_at, status)
+  WHERE status IN ('active', 'expired')
+  INCLUDE (balance);
+
+-- StoreCredit - Expiration batch job
+CREATE INDEX idx_store_credits_expiration_job
+  ON store_credits(expires_at, status)
+  WHERE status IN ('active', 'expired') AND balance > 0;
+
+-- StoreCredit - Grace period lookup
+CREATE INDEX idx_store_credits_grace_period
+  ON store_credits(grace_period_ends_at, status)
+  WHERE status = 'expired' AND balance > 0;
+
+-- StoreCreditTransaction
+CREATE INDEX idx_store_credit_txns_credit ON store_credit_transactions(credit_id);
+CREATE INDEX idx_store_credit_txns_customer ON store_credit_transactions(customer_id);
+CREATE INDEX idx_store_credit_txns_date ON store_credit_transactions(transaction_date DESC);
+
+-- DigitalReward (NEW v2.0.0) - FIFO with merchant priority
+CREATE INDEX idx_digital_rewards_fifo
+  ON digital_rewards(customer_id, currency, merchant_id, expires_at, status)
+  WHERE status IN ('active', 'expired')
+  INCLUDE (balance);
+
+-- DigitalReward - Expiration batch job
+CREATE INDEX idx_digital_rewards_expiration_job
+  ON digital_rewards(expires_at, status)
+  WHERE status IN ('active', 'expired') AND balance > 0;
+
+-- DigitalReward - Grace period lookup
+CREATE INDEX idx_digital_rewards_grace_period
+  ON digital_rewards(grace_period_ends_at, status)
+  WHERE status = 'expired' AND balance > 0;
+
+-- DigitalRewardTransaction
+CREATE INDEX idx_digital_reward_txns_reward ON digital_reward_transactions(reward_id);
+CREATE INDEX idx_digital_reward_txns_customer ON digital_reward_transactions(customer_id);
+CREATE INDEX idx_digital_reward_txns_date ON digital_reward_transactions(transaction_date DESC);
 ```
 
 ### Query Optimization
@@ -539,11 +1087,19 @@ async findSummary(programId: UUID): Promise<ProgramSummary> {
 
 ## References
 
-- [AGGREGATES.md](./AGGREGATES.md)
-- [DOMAIN-SERVICES.md](./DOMAIN-SERVICES.md)
-- [ENTITIES.md](./ENTITIES.md)
+- [AGGREGATES.md](./AGGREGATES.md) - StoreCreditAggregate, DigitalRewardAggregate, WalletAggregate
+- [DOMAIN-SERVICES.md](./DOMAIN-SERVICES.md) - Cross-repository domain services
+- [ENTITIES.md](./ENTITIES.md) - StoreCredit, DigitalReward entities
+- [VALUE-OBJECTS.md](./VALUE-OBJECTS.md) - Money, MultiCurrencyBalance, WalletBalance
+- [BUSINESS-RULES.md](./BUSINESS-RULES.md) - FIFO redemption, expiration rules
+
+**Feature Specifications**:
+- [Store Credit Feature Spec](../../features/store-credit/FEATURE-SPEC.md) - Store credit database schema
+- [Gift Cards Feature Spec](../../features/gift-cards/FEATURE-SPEC.md) - Digital reward database schema
+- [Unified Wallet Feature Spec](../../features/unified-wallet/FEATURE-SPEC.md) - Wallet balance aggregation
 
 ---
 
 **Document Owner**: Backend Team (Loyalty Squad)
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)

@@ -1,12 +1,18 @@
 # Loyalty Domain - Business Rules
 
 **Domain**: Loyalty
-**Last Updated**: 2025-11-07
-**Author**: Ploy Lab (NxLoy Platform)
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)
 
 ## Overview
 
 Business Rules are constraints and policies that govern the behavior of the Loyalty domain. They ensure data integrity, enforce business requirements, and maintain consistency.
+
+**v2.0.0 Changes**:
+- Added store credit business rules (SC-001 to SC-007)
+- Added digital reward business rules (DR-001 to DR-007)
+- Added wallet redemption rules (WR-001 to WR-005)
+- Added distributed locking rule for concurrent redemptions
 
 ## Rule Categories
 
@@ -695,14 +701,701 @@ async findAll(): Promise<LoyaltyTemplate[]> {
 
 ---
 
+## 11. Store Credit Rules (NEW v2.0.0)
+
+### SC-001: Non-Negative Credit Balance
+
+**Rule**: Store credit balance can never be negative
+
+**Type**: Invariant
+
+**Enforcement**: Aggregate validation
+
+```typescript
+class StoreCreditAggregate {
+  private validateInvariants(): void {
+    if (this.balance.amount < 0) {
+      throw new Error('Balance cannot be negative');
+    }
+    if (this.balance.greaterThan(this.amount)) {
+      throw new Error('Balance cannot exceed original amount');
+    }
+  }
+}
+```
+
+---
+
+### SC-002: FIFO Redemption Order
+
+**Rule**: Store credits must be redeemed in FIFO order (earliest expiration first)
+
+**Rationale**: Maximize utilization, reduce breakage, improve customer satisfaction
+
+**Enforcement**: Service layer
+
+```typescript
+class StoreCreditService {
+  async redeem(
+    customerId: UUID,
+    amountToRedeem: Money,
+    currency: string
+  ): Promise<RedemptionResult> {
+    // Fetch active credits sorted by expiration (FIFO)
+    const credits = await this.creditRepository.findActive({
+      customerId,
+      currency,
+      sortBy: 'expires_at ASC'  // Earliest expiration first
+    });
+
+    // Deplete credits in FIFO order
+    let remaining = amountToRedeem.amount;
+    const creditsUsed: CreditUsage[] = [];
+
+    for (const credit of credits) {
+      if (remaining <= 0) break;
+
+      const amountToUse = Math.min(credit.balance.amount, remaining);
+      const creditAggregate = await this.toAggregate(credit);
+
+      creditAggregate.redeem(new Money(amountToUse, currency));
+      await this.repository.save(creditAggregate);
+
+      creditsUsed.push({
+        creditId: credit.id,
+        amountUsed: new Money(amountToUse, currency),
+        balanceRemaining: credit.balance.subtract(new Money(amountToUse, currency))
+      });
+
+      remaining -= amountToUse;
+    }
+
+    return { creditsUsed, totalRedeemed: amountToRedeem };
+  }
+}
+```
+
+---
+
+### SC-003: Currency Matching
+
+**Rule**: Redemption currency must match credit currency
+
+**Rationale**: No post-issuance currency conversion allowed
+
+**Enforcement**: Aggregate validation
+
+```typescript
+redeem(amountToRedeem: Money, externalTransactionId?: string): void {
+  if (amountToRedeem.currency !== this.balance.currency) {
+    throw new Error(
+      `Currency mismatch: credit is ${this.balance.currency}, ` +
+      `redemption is ${amountToRedeem.currency}`
+    );
+  }
+}
+```
+
+---
+
+### SC-004: Expiration Status Validation
+
+**Rule**: Store credits can only be redeemed if status is ACTIVE or EXPIRED (grace period)
+
+**Rationale**: FULLY_EXPIRED credits are breakage (recognized as revenue)
+
+**Enforcement**: Aggregate validation
+
+```typescript
+public isRedeemable(): boolean {
+  return this.status === CreditStatus.ACTIVE ||
+         this.status === CreditStatus.EXPIRED;
+}
+
+redeem(amountToRedeem: Money): void {
+  if (!this.isRedeemable()) {
+    throw new Error(`Cannot redeem ${this.status} credit`);
+  }
+}
+```
+
+---
+
+### SC-005: Expiration Policy Enforcement
+
+**Rule**: Store credits must expire within 12 months + 30-day grace period
+
+**Rationale**: ASEAN compliance (Cambodia, Singapore standards)
+
+**Default Configuration**:
+- Expiration: 12 months from issuance
+- Grace period: 30 days after expiration
+- Notifications: 30 days, 7 days, 1 day before expiration
+
+**Enforcement**: Value object + domain service
+
+```typescript
+class ExpirationPolicy {
+  public static default(): ExpirationPolicy {
+    return new ExpirationPolicy(
+      12,        // 12 months expiration
+      30,        // 30 days grace period
+      [30, 7, 1] // Notify at 30, 7, and 1 day before expiration
+    );
+  }
+
+  public calculateExpirationDate(issuedAt: Date): Date {
+    const expiresAt = new Date(issuedAt);
+    expiresAt.setMonth(expiresAt.getMonth() + this.expirationMonths);
+    return expiresAt;
+  }
+
+  public calculateGracePeriodEnd(expiresAt: Date): Date {
+    const gracePeriodEnds = new Date(expiresAt);
+    gracePeriodEnds.setDate(gracePeriodEnds.getDate() + this.gracePeriodDays);
+    return gracePeriodEnds;
+  }
+}
+```
+
+---
+
+### SC-006: Breakage Revenue Recognition
+
+**Rule**: Breakage revenue is recognized when credit reaches FULLY_EXPIRED status
+
+**Accounting Standard**: IFRS 15 / SFRS(I) 15 (Revenue from Contracts with Customers)
+
+**Timing**: After grace period ends
+
+**Enforcement**: Domain service + scheduled job
+
+```typescript
+class StoreCreditExpirationService {
+  async processFullExpiration(creditId: UUID): Promise<void> {
+    const credit = await this.repository.findById(creditId);
+    const aggregate = this.toAggregate(credit);
+
+    if (new Date() >= credit.gracePeriodEndsAt) {
+      // Mark as fully expired (triggers breakage event)
+      aggregate.markFullyExpired();
+      await this.repository.save(aggregate);
+
+      // Event handler will recognize breakage revenue
+      const events = aggregate.getDomainEvents();
+      await this.eventBus.publishAll(events);
+      aggregate.clearDomainEvents();
+    }
+  }
+}
+```
+
+---
+
+### SC-007: Extension Authorization
+
+**Rule**: Only authorized personnel can extend credit expiration dates
+
+**Rationale**: Prevent unauthorized gift of value to customers
+
+**Enforcement**: Authorization guard + audit trail
+
+```typescript
+@UseGuards(AuthorizationGuard)
+@RequiresRole('STORE_MANAGER', 'CUSTOMER_SERVICE_MANAGER')
+async extendCredit(
+  @CurrentUser() user: User,
+  creditId: UUID,
+  additionalMonths: number,
+  reason: string
+): Promise<void> {
+  const credit = await this.repository.findById(creditId);
+  const aggregate = this.toAggregate(credit);
+
+  aggregate.extendExpiration(additionalMonths, user.id, reason);
+  await this.repository.save(aggregate);
+
+  // Audit log created via domain event
+  const events = aggregate.getDomainEvents();
+  await this.eventBus.publishAll(events);
+}
+```
+
+---
+
+## 12. Digital Reward Rules (NEW v2.0.0)
+
+### DR-001: Merchant Restriction Enforcement
+
+**Rule**: Merchant-specific rewards can only be redeemed at designated merchant
+
+**Rationale**: Partnership agreements and reward targeting
+
+**Enforcement**: Aggregate validation
+
+```typescript
+public redeem(
+  amountToRedeem: Money,
+  redeemingMerchantId: string | null,
+  externalTransactionId?: string
+): void {
+  // Validate merchant restriction
+  if (this.merchantId && this.merchantId !== redeemingMerchantId) {
+    throw new Error(
+      `This reward can only be redeemed at merchant ${this.merchantId}, ` +
+      `not ${redeemingMerchantId}`
+    );
+  }
+}
+```
+
+**Example**:
+```typescript
+// Generic reward (no merchant restriction)
+const genericReward = DigitalRewardAggregate.issue({
+  merchantId: null,  // Redeemable anywhere
+  // ...
+});
+
+// Merchant-specific reward
+const starbucksReward = DigitalRewardAggregate.issue({
+  merchantId: 'merchant_starbucks_123',  // Only Starbucks
+  // ...
+});
+```
+
+---
+
+### DR-002: Loyalty Program Benefit Structure
+
+**Rule**: Digital rewards MUST be structured as loyalty program benefits (not purchased gift cards)
+
+**Rationale**: Regulatory compliance (ASEAN, especially Philippines Gift Check Act)
+
+**Enforcement**: Issuance method validation
+
+```typescript
+enum RewardMethod {
+  PROMOTIONAL = 'promotional',      // ✅ OK - Marketing campaign
+  REFERRAL = 'referral',            // ✅ OK - Referral reward
+  MILESTONE = 'milestone',          // ✅ OK - Achievement reward
+  COMPENSATION = 'compensation',    // ✅ OK - Customer service gesture
+  // PURCHASED = 'purchased',       // ❌ NOT ALLOWED in Phase 1
+}
+
+public static issue(
+  businessId: UUID,
+  customerId: UUID,
+  amount: Money,
+  method: RewardMethod,
+  // ...
+): DigitalRewardAggregate {
+  if (method === 'purchased') {
+    throw new Error(
+      'Purchased digital rewards not supported in Phase 1. ' +
+      'Use promotional/referral/milestone/compensation methods only.'
+    );
+  }
+  // ...
+}
+```
+
+---
+
+### DR-003: Partner Network Redemption
+
+**Rule**: Partner rewards can be redeemed at partner merchant locations
+
+**Enforcement**: Service layer validation
+
+```typescript
+class DigitalRewardService {
+  async redeem(request: RedeemRequest): Promise<RedemptionResult> {
+    const rewards = await this.findEligibleRewards(
+      request.customerId,
+      request.currency,
+      request.merchantId
+    );
+
+    // Filter by merchant eligibility
+    const eligibleRewards = rewards.filter(reward => {
+      if (reward.merchantId === null) {
+        return true;  // Generic reward (redeemable anywhere)
+      }
+
+      if (reward.merchantId === request.merchantId) {
+        return true;  // Exact merchant match
+      }
+
+      // Check partner network
+      if (reward.partnerId) {
+        return this.partnerService.isPartnerMerchant(
+          reward.partnerId,
+          request.merchantId
+        );
+      }
+
+      return false;
+    });
+
+    if (eligibleRewards.length === 0) {
+      throw new Error(
+        `Customer has digital rewards in ${request.currency}, but none are ` +
+        `redeemable at merchant ${request.merchantId}.`
+      );
+    }
+
+    return this.processFifoRedemption(eligibleRewards, request.amount);
+  }
+}
+```
+
+---
+
+### DR-004: FIFO Redemption with Merchant Priority
+
+**Rule**: Digital rewards redeem in FIFO order, merchant-specific before generic
+
+**Rationale**: Maximize merchant-specific reward utilization before generic
+
+**Enforcement**: Service layer sorting
+
+```typescript
+async findEligibleRewards(
+  customerId: UUID,
+  currency: string,
+  merchantId: string
+): Promise<DigitalReward[]> {
+  const rewards = await this.repository.findActive({
+    customerId,
+    currency,
+    sortBy: [
+      // 1. Merchant-specific rewards first (exact match)
+      { merchantId: merchantId, order: 'DESC' },
+      // 2. Then by earliest expiration (FIFO)
+      { expiresAt: 'ASC' }
+    ]
+  });
+
+  return rewards;
+}
+```
+
+---
+
+### DR-005: Currency Immutability
+
+**Rule**: Digital reward currency cannot be changed after issuance
+
+**Rationale**: No post-issuance currency conversion allowed
+
+**Enforcement**: Immutable value object
+
+```typescript
+class DigitalRewardAggregate {
+  constructor(
+    // ...
+    private readonly amount: Money,  // Immutable
+    private balance: Money,  // Mutable (decreases with redemptions)
+    // ...
+  ) {}
+
+  // No setCurrency() method
+  // No convertCurrency() method
+}
+```
+
+---
+
+### DR-006: Balance Tracking Accuracy
+
+**Rule**: Balance must always equal original amount minus total redemptions
+
+**Type**: Invariant
+
+**Enforcement**: Aggregate validation
+
+```typescript
+private validateInvariants(): void {
+  const totalRedeemed = this.transactions
+    .filter(t => t.type === RewardTransactionType.REDEEMED)
+    .reduce((sum, t) => sum + t.amount.amount, 0);
+
+  const expectedBalance = this.amount.amount - totalRedeemed;
+
+  if (Math.abs(this.balance.amount - expectedBalance) > 0.01) {
+    throw new Error('Balance mismatch: balance does not match amount - redemptions');
+  }
+}
+```
+
+---
+
+### DR-007: Expiration Grace Period
+
+**Rule**: Digital rewards follow same expiration policy as store credit
+
+**Configuration**:
+- Default expiration: 12 months
+- Grace period: 30 days
+- Notifications: 30, 7, 1 days before expiration
+
+**Enforcement**: Same ExpirationPolicy value object as store credit
+
+```typescript
+const reward = DigitalRewardAggregate.issue(
+  businessId,
+  customerId,
+  amount,
+  method,
+  issuedBy,
+  ExpirationPolicy.default(),  // Same as store credit
+  // ...
+);
+```
+
+---
+
+## 13. Wallet Redemption Rules (NEW v2.0.0)
+
+### WR-001: Depletion Order Configuration
+
+**Rule**: Wallet redemptions must follow configured depletion order
+
+**Default Order**:
+1. Digital Rewards (earliest expiration)
+2. Store Credit (earliest expiration)
+3. Points (earliest expiration)
+4. Cash
+
+**Rationale**: Maximize loyalty asset utilization, reduce breakage
+
+**Enforcement**: Domain service
+
+```typescript
+class WalletRedemptionService {
+  async execute(
+    customerId: UUID,
+    businessId: UUID,
+    cartTotal: Money,
+    depletionOrder?: DepletionOrder
+  ): Promise<WalletRedemptionResult> {
+    const order = depletionOrder || DepletionOrder.default();
+
+    // Process redemption in configured order
+    for (const rule of order.rules.sort((a, b) => a.priority - b.priority)) {
+      if (!order.canUseBalanceType(rule.type, cartTotal, remainingAmount)) {
+        continue;  // Skip this balance type
+      }
+
+      // Redeem from this balance type
+      await this.redeemBalanceType(rule.type, remainingAmount);
+    }
+  }
+}
+```
+
+---
+
+### WR-002: Distributed Locking Requirement
+
+**Rule**: All wallet redemptions MUST acquire distributed lock before execution
+
+**Rationale**: Prevent double-spend in concurrent redemption scenarios
+
+**Enforcement**: Service layer (Redis Redlock)
+
+```typescript
+class WalletRedemptionService {
+  async execute(
+    customerId: UUID,
+    businessId: UUID,
+    cartTotal: Money
+  ): Promise<WalletRedemptionResult> {
+    // Create lock key per customer + currency
+    const lockKey = `wallet:redemption:${customerId}:${cartTotal.currency}`;
+
+    // Acquire lock with 5-second TTL
+    const lock = await this.redlock.acquire([lockKey], 5000);
+
+    try {
+      // Critical section: Check balance and execute redemption
+      return await this.executeRedemption(customerId, cartTotal);
+    } finally {
+      // Always release lock
+      await lock.release();
+    }
+  }
+}
+```
+
+**Lock Configuration**:
+- **Scope**: Per customer + currency
+- **TTL**: 5 seconds
+- **Retry**: 3 attempts with 200ms delay
+- **Failure Mode**: Reject redemption if lock cannot be acquired
+
+---
+
+### WR-003: Saga Pattern for Multi-Tender
+
+**Rule**: Multi-tender redemptions MUST use Saga pattern with compensating transactions
+
+**Rationale**: Ensure atomicity across multiple balance types (eventual consistency)
+
+**Enforcement**: Domain service
+
+```typescript
+class WalletRedemptionService {
+  async execute(request: WalletRedemptionRequest): Promise<WalletRedemptionResponse> {
+    const sagaId = generateUUID();
+    const compensations: Array<() => Promise<void>> = [];
+
+    try {
+      // Step 1: Redeem digital rewards
+      const drResult = await this.digitalRewardService.redeem({...});
+      compensations.push(async () => {
+        await this.digitalRewardService.reverseRedemption(drResult.transactionId);
+      });
+
+      // Step 2: Redeem store credit
+      const scResult = await this.storeCreditService.redeem({...});
+      compensations.push(async () => {
+        await this.storeCreditService.reverseRedemption(scResult.transactionId);
+      });
+
+      // Step 3: Redeem points
+      const ptsResult = await this.pointsService.redeem({...});
+      compensations.push(async () => {
+        await this.pointsService.reverseRedemption(ptsResult.transactionId);
+      });
+
+      // All succeeded
+      return { sagaId, breakdown, ... };
+
+    } catch (error) {
+      // Execute compensations (rollback)
+      for (const compensate of compensations.reverse()) {
+        await this.executeWithTimeout(compensate, 5000);
+      }
+      throw new WalletRedemptionError(`Saga ${sagaId} failed: ${error.message}`);
+    }
+  }
+}
+```
+
+---
+
+### WR-004: Redemption Percentage Limits
+
+**Rule**: Individual balance types may have maximum redemption percentage limits
+
+**Example**: "Points can only cover up to 50% of cart total"
+
+**Enforcement**: DepletionOrder value object
+
+```typescript
+class DepletionOrder {
+  public canUseBalanceType(
+    type: BalanceType,
+    cartTotal: Money,
+    remainingAmount: Money
+  ): boolean {
+    const rule = this.rules.find(r => r.type === type);
+    if (!rule || !rule.conditions) return true;
+
+    // Check max redemption percentage
+    if (rule.conditions.maxRedemptionPercentage) {
+      const maxRedemption = cartTotal.multiply(
+        rule.conditions.maxRedemptionPercentage / 100
+      );
+      const alreadyRedeemed = cartTotal.subtract(remainingAmount);
+
+      if (alreadyRedeemed.greaterThanOrEqual(maxRedemption)) {
+        return false;  // Already hit max percentage
+      }
+    }
+
+    return true;
+  }
+}
+
+// Example usage
+const depletionOrder = new DepletionOrder([
+  {
+    type: BalanceType.POINTS,
+    priority: 1,
+    conditions: {
+      maxRedemptionPercentage: 50  // Points can only cover 50% of cart
+    }
+  },
+  { type: BalanceType.STORE_CREDIT, priority: 2 },
+  { type: BalanceType.CASH, priority: 3 }
+], true);
+```
+
+---
+
+### WR-005: Minimum Transaction Amount
+
+**Rule**: Balance types may have minimum transaction amount requirements
+
+**Example**: "Store credit only applies to orders $10+"
+
+**Enforcement**: DepletionOrder value object
+
+```typescript
+class DepletionOrder {
+  public canUseBalanceType(
+    type: BalanceType,
+    cartTotal: Money,
+    remainingAmount: Money
+  ): boolean {
+    const rule = this.rules.find(r => r.type === type);
+    if (!rule || !rule.conditions) return true;
+
+    // Check min transaction amount
+    if (rule.conditions.minTransactionAmount) {
+      if (cartTotal.lessThan(rule.conditions.minTransactionAmount)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+}
+
+// Example usage
+const depletionOrder = new DepletionOrder([
+  {
+    type: BalanceType.STORE_CREDIT,
+    priority: 1,
+    conditions: {
+      minTransactionAmount: new Money(10, 'USD')  // $10 minimum
+    }
+  },
+  { type: BalanceType.POINTS, priority: 2 }
+], true);
+```
+
+---
+
 ## References
 
 - [DOMAIN-OVERVIEW.md](./DOMAIN-OVERVIEW.md)
-- [AGGREGATES.md](./AGGREGATES.md)
-- [VALUE-OBJECTS.md](./VALUE-OBJECTS.md)
-- [DOMAIN-SERVICES.md](./DOMAIN-SERVICES.md)
+- [AGGREGATES.md](./AGGREGATES.md) - Aggregate implementations for wallet features
+- [VALUE-OBJECTS.md](./VALUE-OBJECTS.md) - WalletBalance, DepletionOrder, ExpirationPolicy
+- [DOMAIN-SERVICES.md](./DOMAIN-SERVICES.md) - Cross-aggregate wallet services
+- [ENTITIES.md](./ENTITIES.md) - StoreCredit, DigitalReward entities
+
+**Feature Specifications**:
+- [Store Credit Feature Spec](../../features/store-credit/FEATURE-SPEC.md)
+- [Gift Cards Feature Spec](../../features/gift-cards/FEATURE-SPEC.md)
+- [Unified Wallet Feature Spec](../../features/unified-wallet/FEATURE-SPEC.md)
+- [Unified Wallet Architecture Review](../../features/unified-wallet/ARCHITECTURE-REVIEW.md)
 
 ---
 
 **Document Owner**: Backend Team (Loyalty Squad)
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)

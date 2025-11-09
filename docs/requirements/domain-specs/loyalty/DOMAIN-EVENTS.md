@@ -1,12 +1,18 @@
 # Loyalty Domain - Domain Events
 
 **Domain**: Loyalty
-**Last Updated**: 2025-11-07
-**Author**: Ploy Lab (NxLoy Platform)
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)
 
 ## Overview
 
 Domain Events represent significant occurrences within the Loyalty domain. They enable loose coupling between bounded contexts and support event-driven architecture.
+
+**v2.0.0 Changes**:
+- Added store credit events (10-15)
+- Added digital reward events (16-21)
+- Added wallet redemption events (22-23)
+- Added saga coordination events
 
 ## Event Design Principles
 
@@ -372,6 +378,504 @@ interface LoyaltyTemplateUsedEvent {
 
 ---
 
+## Store Credit Events (NEW v2.0.0)
+
+### 10. StoreCreditIssuedEvent
+
+**Purpose**: Published when store credit is issued to a customer
+
+```typescript
+interface StoreCreditIssuedEvent {
+  eventId: UUID;
+  eventType: 'store_credit.issued';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID; // creditId
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    amount: Money;
+    currency: string;
+    method: CreditMethod; // promotional, refund, cashback_reward, automated
+    reason?: string;
+    expiresAt: Date;
+    gracePeriodEndsAt: Date;
+    campaignId?: UUID;
+    rewardId?: UUID;
+    issuedBy: UUID;
+  };
+}
+```
+
+**Consumers**:
+- Customer Service: Update customer wallet balance
+- Notification Service: Notify customer of credit received
+- Analytics Service: Track credit issuance metrics
+- Accounting Service: Record deferred revenue liability
+
+**Example**:
+```json
+{
+  "eventId": "sc1-...",
+  "eventType": "store_credit.issued",
+  "version": "1.0",
+  "timestamp": "2025-11-09T10:00:00Z",
+  "aggregateId": "credit-001",
+  "businessId": "biz-456",
+  "data": {
+    "customerId": "cust-222",
+    "amount": { "amount": 10.00, "currency": "USD" },
+    "currency": "USD",
+    "method": "cashback_reward",
+    "reason": "Loyalty points converted to store credit",
+    "expiresAt": "2026-11-09T00:00:00Z",
+    "gracePeriodEndsAt": "2026-12-09T00:00:00Z",
+    "rewardId": "reward-789",
+    "issuedBy": "system"
+  }
+}
+```
+
+---
+
+### 11. StoreCreditRedeemedEvent
+
+**Purpose**: Published when store credit is redeemed (partially or fully)
+
+```typescript
+interface StoreCreditRedeemedEvent {
+  eventId: UUID;
+  eventType: 'store_credit.redeemed';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID; // creditId
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    amountRedeemed: Money;
+    balanceRemaining: Money;
+    externalTransactionId?: string; // Order ID
+    transactionId: UUID; // Store credit transaction ID
+  };
+}
+```
+
+**Consumers**:
+- Customer Service: Update wallet balance
+- Notification Service: Send redemption confirmation
+- Analytics Service: Track redemption patterns
+- Accounting Service: Recognize revenue
+
+---
+
+### 12. StoreCreditExpiredEvent
+
+**Purpose**: Published when store credit reaches expiration date (enters grace period)
+
+```typescript
+interface StoreCreditExpiredEvent {
+  eventId: UUID;
+  eventType: 'store_credit.expired';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    balanceAtExpiration: Money;
+    expiresAt: Date;
+    gracePeriodEndsAt: Date;
+  };
+}
+```
+
+**Consumers**:
+- Notification Service: Warn customer about grace period
+- Analytics Service: Track expiration metrics
+
+---
+
+### 13. StoreCreditBreakageRecognizedEvent
+
+**Purpose**: Published when grace period ends and credit becomes fully expired (breakage revenue recognized)
+
+```typescript
+interface StoreCreditBreakageRecognizedEvent {
+  eventId: UUID;
+  eventType: 'store_credit.breakage_recognized';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    breakageAmount: Money;
+    originalAmount: Money;
+    issuedAt: Date;
+    expiresAt: Date;
+    gracePeriodEndsAt: Date;
+    fullyExpiredAt: Date;
+  };
+}
+```
+
+**Consumers**:
+- Accounting Service: Recognize breakage revenue
+- Analytics Service: Track breakage rates
+- Compliance Service: Ensure regulatory compliance (IFRS 15)
+
+**Accounting Treatment**:
+```typescript
+// On issuance: Debit Cash, Credit Deferred Revenue Liability
+// On redemption: Debit Deferred Revenue, Credit Revenue
+// On breakage: Debit Deferred Revenue, Credit Breakage Revenue
+```
+
+---
+
+### 14. StoreCreditExtendedEvent
+
+**Purpose**: Published when credit expiration date is extended
+
+```typescript
+interface StoreCreditExtendedEvent {
+  eventId: UUID;
+  eventType: 'store_credit.extended';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    oldExpiresAt: Date;
+    newExpiresAt: Date;
+    additionalMonths: number;
+    extendedBy: UUID; // User who authorized extension
+    reason: string;
+  };
+}
+```
+
+**Consumers**:
+- Audit Service: Log extension for compliance
+- Notification Service: Notify customer of extension
+- Analytics Service: Track extension patterns
+
+---
+
+### 15. StoreCreditReversedEvent (NEW v2.0.0)
+
+**Purpose**: Published when credit redemption is reversed (refund/compensation)
+
+```typescript
+interface StoreCreditReversedEvent {
+  eventId: UUID;
+  eventType: 'store_credit.reversed';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    amountRestored: Money;
+    balanceAfter: Money;
+    originalTransactionId: UUID;
+    reversalReason: string;
+    reversedBy: UUID;
+  };
+}
+```
+
+**Consumers**:
+- Customer Service: Update wallet balance
+- Notification Service: Notify customer of reversal
+- Accounting Service: Reverse revenue recognition
+
+---
+
+## Digital Reward Events (NEW v2.0.0)
+
+### 16. DigitalRewardIssuedEvent
+
+**Purpose**: Published when digital reward is issued to customer
+
+```typescript
+interface DigitalRewardIssuedEvent {
+  eventId: UUID;
+  eventType: 'digital_reward.issued';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID; // rewardId
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    amount: Money;
+    currency: string;
+    method: RewardMethod; // promotional, referral, milestone, compensation
+    reason?: string;
+    merchantId?: UUID; // For merchant-specific rewards
+    partnerId?: UUID; // For partner network rewards
+    expiresAt: Date;
+    gracePeriodEndsAt: Date;
+    campaignId?: UUID;
+    issuedBy: UUID;
+  };
+}
+```
+
+**Consumers**:
+- Customer Service: Update wallet balance
+- Notification Service: Notify customer of reward
+- Analytics Service: Track reward issuance
+- Partner Service: Notify partner if partner reward
+
+---
+
+### 17. DigitalRewardRedeemedEvent
+
+**Purpose**: Published when digital reward is redeemed
+
+```typescript
+interface DigitalRewardRedeemedEvent {
+  eventId: UUID;
+  eventType: 'digital_reward.redeemed';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    amountRedeemed: Money;
+    balanceRemaining: Money;
+    merchantId?: string; // Where it was redeemed
+    externalTransactionId?: string;
+    transactionId: UUID;
+  };
+}
+```
+
+**Consumers**:
+- Customer Service: Update wallet balance
+- Notification Service: Send redemption confirmation
+- Analytics Service: Track redemption patterns
+- Partner Service: Notify partner of redemption
+
+---
+
+### 18. DigitalRewardExpiredEvent
+
+**Purpose**: Published when digital reward reaches expiration date
+
+```typescript
+interface DigitalRewardExpiredEvent {
+  eventId: UUID;
+  eventType: 'digital_reward.expired';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    balanceAtExpiration: Money;
+    expiresAt: Date;
+    gracePeriodEndsAt: Date;
+    merchantId?: UUID;
+  };
+}
+```
+
+**Consumers**:
+- Notification Service: Warn customer about grace period
+- Analytics Service: Track expiration metrics
+
+---
+
+### 19. DigitalRewardBreakageRecognizedEvent
+
+**Purpose**: Published when grace period ends and reward becomes fully expired
+
+```typescript
+interface DigitalRewardBreakageRecognizedEvent {
+  eventId: UUID;
+  eventType: 'digital_reward.breakage_recognized';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    breakageAmount: Money;
+    originalAmount: Money;
+    issuedAt: Date;
+    expiresAt: Date;
+    gracePeriodEndsAt: Date;
+    fullyExpiredAt: Date;
+    merchantId?: UUID;
+  };
+}
+```
+
+**Consumers**:
+- Accounting Service: Recognize breakage revenue
+- Analytics Service: Track breakage rates
+- Partner Service: Update partner reporting
+
+---
+
+### 20. DigitalRewardExtendedEvent
+
+**Purpose**: Published when reward expiration is extended
+
+```typescript
+interface DigitalRewardExtendedEvent {
+  eventId: UUID;
+  eventType: 'digital_reward.extended';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    oldExpiresAt: Date;
+    newExpiresAt: Date;
+    additionalMonths: number;
+    extendedBy: UUID;
+    reason: string;
+  };
+}
+```
+
+**Consumers**:
+- Audit Service: Log extension
+- Notification Service: Notify customer
+- Analytics Service: Track extension patterns
+
+---
+
+### 21. DigitalRewardReversedEvent
+
+**Purpose**: Published when reward redemption is reversed
+
+```typescript
+interface DigitalRewardReversedEvent {
+  eventId: UUID;
+  eventType: 'digital_reward.reversed';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID;
+  businessId: UUID;
+  data: {
+    customerId: UUID;
+    amountRestored: Money;
+    balanceAfter: Money;
+    originalTransactionId: UUID;
+    reversalReason: string;
+    reversedBy: UUID;
+  };
+}
+```
+
+---
+
+## Wallet Redemption Events (NEW v2.0.0)
+
+### 22. WalletRedemptionStartedEvent
+
+**Purpose**: Published when multi-tender wallet redemption begins (Saga start)
+
+```typescript
+interface WalletRedemptionStartedEvent {
+  eventId: UUID;
+  eventType: 'wallet.redemption.started';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID; // sagaId
+  businessId: UUID;
+  data: {
+    sagaId: UUID;
+    customerId: UUID;
+    cartTotal: Money;
+    currency: string;
+    depletionOrder: DepletionRule[];
+    externalTransactionId?: string;
+  };
+}
+```
+
+**Consumers**:
+- Analytics Service: Track multi-tender usage
+- Saga Coordinator: Begin saga orchestration
+
+---
+
+### 23. WalletRedemptionCompletedEvent
+
+**Purpose**: Published when multi-tender wallet redemption completes successfully
+
+```typescript
+interface WalletRedemptionCompletedEvent {
+  eventId: UUID;
+  eventType: 'wallet.redemption.completed';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID; // sagaId
+  businessId: UUID;
+  data: {
+    sagaId: UUID;
+    customerId: UUID;
+    breakdown: RedemptionBreakdown[];
+    totalRedeemed: Money;
+    remainingToPay: Money;
+    externalTransactionId?: string;
+  };
+}
+
+interface RedemptionBreakdown {
+  type: BalanceType; // digital_rewards, store_credit, points
+  amount: Money;
+  transactionId: UUID;
+}
+```
+
+**Consumers**:
+- Customer Service: Update wallet balance
+- Notification Service: Send redemption summary
+- Analytics Service: Track multi-tender metrics
+- Accounting Service: Recognize revenue for each type
+
+---
+
+### 24. WalletRedemptionFailedEvent
+
+**Purpose**: Published when multi-tender redemption fails (Saga rollback)
+
+```typescript
+interface WalletRedemptionFailedEvent {
+  eventId: UUID;
+  eventType: 'wallet.redemption.failed';
+  version: '1.0';
+  timestamp: Date;
+  aggregateId: UUID; // sagaId
+  businessId: UUID;
+  data: {
+    sagaId: UUID;
+    customerId: UUID;
+    cartTotal: Money;
+    failureReason: string;
+    completedSteps: string[]; // Which steps succeeded before failure
+    compensatedSteps: string[]; // Which steps were rolled back
+    failedStep?: string;
+  };
+}
+```
+
+**Consumers**:
+- Error Monitoring: Alert on saga failures
+- Analytics Service: Track failure patterns
+- Saga Coordinator: Handle compensation completion
+
+---
+
 ## Event Publishing
 
 ### Event Bus Interface
@@ -597,11 +1101,19 @@ class EventRetryHandler {
 
 ## References
 
-- [AGGREGATES.md](./AGGREGATES.md)
-- [DOMAIN-SERVICES.md](./DOMAIN-SERVICES.md)
-- [AsyncAPI Contract](../../../contracts/events.asyncapi.yaml)
+- [AGGREGATES.md](./AGGREGATES.md) - Aggregate implementations that publish these events
+- [DOMAIN-SERVICES.md](./DOMAIN-SERVICES.md) - Domain services that coordinate cross-aggregate events
+- [BUSINESS-RULES.md](./BUSINESS-RULES.md) - Business rules that trigger events
+- [VALUE-OBJECTS.md](./VALUE-OBJECTS.md) - Value objects used in event payloads
+- [AsyncAPI Contract](../../../contracts/events.asyncapi.yaml) - Event schema contracts
+
+**Feature Specifications**:
+- [Store Credit Feature Spec](../../features/store-credit/FEATURE-SPEC.md) - Store credit event flows
+- [Gift Cards Feature Spec](../../features/gift-cards/FEATURE-SPEC.md) - Digital reward event flows
+- [Unified Wallet Feature Spec](../../features/unified-wallet/FEATURE-SPEC.md) - Wallet redemption saga events
 
 ---
 
 **Document Owner**: Backend Team (Loyalty Squad)
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)

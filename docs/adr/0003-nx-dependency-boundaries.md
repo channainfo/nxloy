@@ -2,7 +2,6 @@
 
 **Date**: 2025-11-06
 **Status**: Accepted
-**Author**: Ploy Lab
 
 ## Context
 

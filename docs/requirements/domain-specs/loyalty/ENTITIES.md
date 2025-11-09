@@ -1,12 +1,20 @@
 # Loyalty Domain - Entities
 
 **Domain**: Loyalty
-**Last Updated**: 2025-11-07
-**Author**: Ploy Lab (NxLoy Platform)
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)
 
 ## Overview
 
 This document defines all entities within the Loyalty domain, their attributes, relationships, and lifecycle management.
+
+**v2.0.0 Changes**:
+- Added `Wallet` aggregate for unified balance management
+- Added `StoreCredit` entity (CASHBACK reward type)
+- Added `DigitalReward` entity (DIGITAL_GIFT reward type)
+- Added `StoreCreditTransaction` and `DigitalRewardTransaction` entities
+- Added `WalletConfiguration` entity for business-level wallet settings
+- Updated `LoyaltyTransaction` to integrate with wallet redemptions
 
 ## Core Entities
 
@@ -307,9 +315,375 @@ enum Industry {
 
 ---
 
+### 8. Wallet
+
+**Purpose**: Unified view of all customer loyalty assets (points, store credit, digital rewards)
+
+**Attributes**:
+```typescript
+interface Wallet {
+  id: UUID
+  customerId: UUID
+  businessId: UUID
+
+  // Aggregated Balance Summary
+  totalValueUsd: number  // Approximate total value across all balance types
+  lastUpdatedAt: Date
+
+  // Relationships
+  points: LoyaltyTransaction[]  // Active points balance
+  storeCredits: StoreCredit[]  // Active store credits
+  digitalRewards: DigitalReward[]  // Active digital rewards
+
+  // Configuration reference
+  configurationId: UUID
+
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+**Business Rules**:
+- One wallet per customer per business
+- Virtual aggregate (computed from underlying balances)
+- Balance updates trigger cache invalidation
+- Real-time sync across devices (WebSocket)
+
+**Lifecycle**:
+1. Created upon first loyalty interaction (auto-enrollment)
+2. Updated whenever points/credits/rewards change
+3. Never deleted (soft delete via customer deletion)
+
+**Domain Events Published**:
+- `wallet.balance_updated` (aggregated event for real-time sync)
+
+---
+
+### 9. StoreCredit
+
+**Purpose**: Cash-equivalent credits earned through cashback, refunds, or promotions
+
+**Attributes**:
+```typescript
+interface StoreCredit {
+  id: UUID
+  businessId: UUID
+  customerId: UUID
+
+  // Financial Details
+  amount: Money  // Original amount issued
+  currency: Currency  // USD, KHR, SGD, THB, VND, MYR, PHP, IDR
+  balance: Money  // Remaining balance (amount - redeemed)
+
+  // Issuance Details
+  method: CreditMethod  // promotional, refund, cashback_reward, automated
+  reason?: string
+  issuedBy: UUID  // User ID (admin, system, partner)
+  issuedAt: Date
+
+  // Expiration Management
+  expiresAt: Date
+  gracePeriodEndsAt: Date
+  status: CreditStatus  // active, expired, grace_period, fully_expired
+
+  // Campaign/Reward References
+  campaignId?: UUID
+  rewardId?: UUID  // Links to RewardCatalog CASHBACK reward type
+
+  // Metadata
+  metadata: Record<string, any>
+
+  // Audit Trail
+  createdAt: Date
+  updatedAt: Date
+
+  // Relationships
+  transactions: StoreCreditTransaction[]
+}
+
+enum CreditMethod {
+  PROMOTIONAL = 'promotional',
+  REFUND = 'refund',
+  CASHBACK_REWARD = 'cashback_reward',
+  AUTOMATED = 'automated'
+}
+
+enum CreditStatus {
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  GRACE_PERIOD = 'grace_period',
+  FULLY_EXPIRED = 'fully_expired'
+}
+```
+
+**Business Rules**:
+- Balance cannot exceed original amount
+- Balance cannot be negative
+- Multi-currency support (no post-issuance conversion)
+- FIFO redemption (earliest expiration first within same currency)
+- Grace period: 30 days after expiration
+- VAT/GST excluded from credit (customer pays tax separately)
+
+**Lifecycle**:
+1. Issued via admin portal, campaign, or reward redemption
+2. Status: `active` (can redeem)
+3. Expires after 12 months → `expired` (can still redeem during grace period)
+4. Grace period ends → `fully_expired` (breakage recognized)
+
+**Domain Events Published**:
+- `store_credit.issued`
+- `store_credit.redeemed`
+- `store_credit.expired`
+- `store_credit.breakage_recognized`
+
+---
+
+### 10. StoreCreditTransaction
+
+**Purpose**: Immutable ledger of all store credit operations
+
+**Attributes**:
+```typescript
+interface StoreCreditTransaction {
+  id: UUID
+  businessId: UUID
+  creditId: UUID
+  customerId: UUID
+
+  // Transaction Details
+  transactionType: CreditTransactionType  // issued, redeemed, expired, extended
+  amount: Money
+  currency: Currency
+  balanceAfter: Money
+
+  // External References
+  externalTransactionId?: string  // e.g., order_id, refund_id
+
+  // Metadata
+  metadata: Record<string, any>
+
+  // Audit Trail
+  transactionDate: Date
+  createdAt: Date
+}
+
+enum CreditTransactionType {
+  ISSUED = 'issued',
+  REDEEMED = 'redeemed',
+  EXPIRED = 'expired',
+  EXTENDED = 'extended'
+}
+```
+
+**Business Rules**:
+- Immutable after creation (audit trail)
+- Positive amount for issued/extended, negative for redeemed/expired
+- balanceAfter must match credit.balance after transaction
+- Transactions must be ordered (sequence)
+
+---
+
+### 11. DigitalReward
+
+**Purpose**: Promotional credits, referral bonuses, partner rewards
+
+**Attributes**:
+```typescript
+interface DigitalReward {
+  id: UUID
+  businessId: UUID
+  customerId: UUID
+
+  // Financial Details
+  amount: Money
+  currency: Currency
+  balance: Money
+
+  // Issuance Details
+  method: RewardMethod  // promotional, referral, campaign, partner
+  reason?: string
+  campaignId?: UUID
+  partnerId?: UUID
+  merchantId?: UUID  // For merchant-specific redemption
+  issuedBy: UUID
+  issuedAt: Date
+
+  // Expiration Management
+  expiresAt: Date
+  gracePeriodEndsAt: Date
+  status: RewardStatus  // active, expired, grace_period, fully_expired
+
+  // Reward Catalog Reference
+  rewardId?: UUID  // Links to RewardCatalog DIGITAL_GIFT reward type
+
+  // Metadata
+  metadata: Record<string, any>
+
+  // Audit Trail
+  createdAt: Date
+  updatedAt: Date
+
+  // Relationships
+  transactions: DigitalRewardTransaction[]
+}
+
+enum RewardMethod {
+  PROMOTIONAL = 'promotional',
+  REFERRAL = 'referral',
+  CAMPAIGN = 'campaign',
+  PARTNER = 'partner'
+}
+
+enum RewardStatus {
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  GRACE_PERIOD = 'grace_period',
+  FULLY_EXPIRED = 'fully_expired'
+}
+```
+
+**Business Rules**:
+- Balance cannot exceed original amount
+- Balance cannot be negative
+- Multi-currency support (no post-issuance conversion)
+- FIFO redemption (earliest expiration first within same currency)
+- Merchant-specific redemption (if merchantId present)
+- Grace period: 30 days after expiration
+- VAT/GST excluded from reward (customer pays tax separately)
+
+**Lifecycle**:
+1. Issued via campaign, referral, or partner promotion
+2. Status: `active` (can redeem)
+3. Expires after 12 months → `expired` (can still redeem during grace period)
+4. Grace period ends → `fully_expired` (breakage recognized)
+
+**Domain Events Published**:
+- `digital_reward.issued`
+- `digital_reward.redeemed`
+- `digital_reward.expired`
+- `digital_reward.breakage_recognized`
+
+---
+
+### 12. DigitalRewardTransaction
+
+**Purpose**: Immutable ledger of all digital reward operations
+
+**Attributes**:
+```typescript
+interface DigitalRewardTransaction {
+  id: UUID
+  businessId: UUID
+  rewardId: UUID
+  customerId: UUID
+
+  // Transaction Details
+  transactionType: RewardTransactionType  // issued, redeemed, expired, extended
+  amount: Money
+  currency: Currency
+  balanceAfter: Money
+
+  // External References
+  externalTransactionId?: string  // e.g., order_id
+
+  // Metadata
+  metadata: Record<string, any>
+
+  // Audit Trail
+  transactionDate: Date
+  createdAt: Date
+}
+
+enum RewardTransactionType {
+  ISSUED = 'issued',
+  REDEEMED = 'redeemed',
+  EXPIRED = 'expired',
+  EXTENDED = 'extended'
+}
+```
+
+**Business Rules**:
+- Immutable after creation (audit trail)
+- Positive amount for issued/extended, negative for redeemed/expired
+- balanceAfter must match reward.balance after transaction
+- Transactions must be ordered (sequence)
+
+---
+
+### 13. WalletConfiguration
+
+**Purpose**: Business-level wallet settings and redemption rules
+
+**Attributes**:
+```typescript
+interface WalletConfiguration {
+  id: UUID
+  businessId: UUID
+
+  // Depletion Order Configuration
+  depletionOrder: DepletionRule[]
+  expirationOverride: boolean  // If true, use expiring balances first
+
+  // Redemption Rules
+  minRedemptionPoints: number  // Minimum points for redemption
+  minRedemptionStoreCredit: Money
+  minRedemptionDigitalRewards: Money
+
+  // Points Valuation (for total value calculation)
+  pointsToUsdRate: number  // e.g., 0.01 (1 point = $0.01)
+
+  // Multi-Tender Settings
+  allowMultiTender: boolean
+  allowPartialRedemption: boolean
+
+  // Metadata
+  metadata: Record<string, any>
+
+  // Audit Trail
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface DepletionRule {
+  type: BalanceType  // points, store_credit, digital_rewards, cash
+  priority: number  // Lower = higher priority
+  conditions?: RuleConditions
+}
+
+interface RuleConditions {
+  minTransactionAmount?: Money
+  minRedemptionPoints?: number
+  maxRedemptionPercentage?: number  // e.g., 50% max loyalty payment
+}
+
+enum BalanceType {
+  POINTS = 'points',
+  STORE_CREDIT = 'store_credit',
+  DIGITAL_REWARDS = 'digital_rewards',
+  CASH = 'cash'
+}
+```
+
+**Business Rules**:
+- One configuration per business
+- Depletion order must include all balance types
+- Priority values must be unique
+- Conditions are optional (no conditions = always apply)
+
+**Lifecycle**:
+1. Created with default settings upon business creation
+2. Updated by business admin via admin portal
+3. Never deleted (updated with new config)
+
+**Domain Events Published**:
+- `wallet.configuration_updated`
+
+---
+
 ## Entity Relationships
 
 ```
+// Existing Relationships
 LoyaltyProgram (1) ←→ (N) LoyaltyRule
 LoyaltyProgram (1) ←→ (N) CustomerEnrollment
 LoyaltyProgram (1) ←→ (N) Tier
@@ -321,6 +695,23 @@ CustomerEnrollment (N) ←→ (1) Tier [current tier]
 
 Customer (external) (1) ←→ (N) CustomerEnrollment
 Business (external) (1) ←→ (N) LoyaltyProgram
+
+// NEW: Wallet Relationships (v2.0.0)
+Customer (1) ←→ (1) Wallet per Business
+Business (1) ←→ (1) WalletConfiguration
+
+Wallet (1) ←→ (N) LoyaltyTransaction [points balance]
+Wallet (1) ←→ (N) StoreCredit
+Wallet (1) ←→ (N) DigitalReward
+
+StoreCredit (1) ←→ (N) StoreCreditTransaction
+DigitalReward (1) ←→ (N) DigitalRewardTransaction
+
+WalletConfiguration (1) ←→ (N) Wallet [configuration reference]
+
+// Reward Catalog Integration
+StoreCredit (N) ←→ (1) Reward [CASHBACK type]
+DigitalReward (N) ←→ (1) Reward [DIGITAL_GIFT type]
 ```
 
 ## Database Schema References
@@ -335,10 +726,19 @@ Key tables:
 - `loyalty_progress`
 - `tiers`
 - `loyalty_templates`
+- **NEW (v2.0.0)**:
+  - `wallets` (virtual - computed from balances)
+  - `store_credits`
+  - `store_credit_transactions`
+  - `digital_rewards`
+  - `digital_reward_transactions`
+  - `wallet_configuration`
 
 ## Indexes
 
 Required indexes for performance:
+
+**Existing Indexes**:
 ```sql
 CREATE INDEX idx_programs_business ON loyalty_programs(business_id);
 CREATE INDEX idx_programs_status ON loyalty_programs(status);
@@ -350,13 +750,91 @@ CREATE INDEX idx_templates_industry ON loyalty_templates(industry);
 CREATE INDEX idx_templates_popularity ON loyalty_templates(popularity DESC);
 ```
 
+**NEW Wallet Indexes (v2.0.0)**:
+```sql
+-- Store Credit Indexes
+CREATE INDEX idx_store_credits_customer_id ON store_credits(customer_id);
+CREATE INDEX idx_store_credits_business_id ON store_credits(business_id);
+CREATE INDEX idx_store_credits_status ON store_credits(status);
+CREATE INDEX idx_store_credits_expires_at ON store_credits(expires_at);
+CREATE INDEX idx_store_credits_currency ON store_credits(currency);
+
+-- Composite index for balance queries (most common query)
+CREATE INDEX idx_store_credits_customer_currency_status
+  ON store_credits(customer_id, currency, status)
+  WHERE status = 'active';
+
+-- FIFO redemption index (critical path)
+CREATE INDEX idx_store_credits_fifo
+  ON store_credits(customer_id, currency, expires_at, status)
+  WHERE status IN ('active', 'expired')
+  INCLUDE (balance);
+
+-- Expiration batch job index
+CREATE INDEX idx_store_credits_expiration_job
+  ON store_credits(expires_at, status)
+  WHERE status IN ('active', 'expired');
+
+-- Store Credit Transaction Indexes
+CREATE INDEX idx_store_credit_txns_credit_id ON store_credit_transactions(credit_id);
+CREATE INDEX idx_store_credit_txns_customer_id ON store_credit_transactions(customer_id);
+CREATE INDEX idx_store_credit_txns_business_id ON store_credit_transactions(business_id);
+CREATE INDEX idx_store_credit_txns_type ON store_credit_transactions(transaction_type);
+CREATE INDEX idx_store_credit_txns_date ON store_credit_transactions(transaction_date);
+CREATE INDEX idx_store_credit_txns_external_id ON store_credit_transactions(external_transaction_id)
+  WHERE external_transaction_id IS NOT NULL;
+
+-- Digital Reward Indexes (similar to store credit)
+CREATE INDEX idx_digital_rewards_customer_id ON digital_rewards(customer_id);
+CREATE INDEX idx_digital_rewards_business_id ON digital_rewards(business_id);
+CREATE INDEX idx_digital_rewards_status ON digital_rewards(status);
+CREATE INDEX idx_digital_rewards_expires_at ON digital_rewards(expires_at);
+CREATE INDEX idx_digital_rewards_currency ON digital_rewards(currency);
+CREATE INDEX idx_digital_rewards_partner_id ON digital_rewards(partner_id) WHERE partner_id IS NOT NULL;
+CREATE INDEX idx_digital_rewards_merchant_id ON digital_rewards(merchant_id) WHERE merchant_id IS NOT NULL;
+
+-- Composite index for balance queries
+CREATE INDEX idx_digital_rewards_customer_currency_status
+  ON digital_rewards(customer_id, currency, status)
+  WHERE status = 'active';
+
+-- FIFO redemption index
+CREATE INDEX idx_digital_rewards_fifo
+  ON digital_rewards(customer_id, currency, expires_at, status)
+  WHERE status IN ('active', 'expired')
+  INCLUDE (balance);
+
+-- Expiration batch job index
+CREATE INDEX idx_digital_rewards_expiration_job
+  ON digital_rewards(expires_at, status)
+  WHERE status IN ('active', 'expired');
+
+-- Digital Reward Transaction Indexes
+CREATE INDEX idx_digital_reward_txns_reward_id ON digital_reward_transactions(reward_id);
+CREATE INDEX idx_digital_reward_txns_customer_id ON digital_reward_transactions(customer_id);
+CREATE INDEX idx_digital_reward_txns_business_id ON digital_reward_transactions(business_id);
+CREATE INDEX idx_digital_reward_txns_type ON digital_reward_transactions(transaction_type);
+CREATE INDEX idx_digital_reward_txns_date ON digital_reward_transactions(transaction_date);
+CREATE INDEX idx_digital_reward_txns_external_id ON digital_reward_transactions(external_transaction_id)
+  WHERE external_transaction_id IS NOT NULL;
+
+-- Wallet Configuration Index
+CREATE INDEX idx_wallet_config_business_id ON wallet_configuration(business_id);
+```
+
 ## References
 
 - [DOMAIN-OVERVIEW.md](./DOMAIN-OVERVIEW.md)
 - [AGGREGATES.md](./AGGREGATES.md)
 - [VALUE-OBJECTS.md](./VALUE-OBJECTS.md)
+- **NEW (v2.0.0)**:
+  - [/docs/requirements/features/store-credit/FEATURE-SPEC.md](../../features/store-credit/FEATURE-SPEC.md)
+  - [/docs/requirements/features/gift-cards/FEATURE-SPEC.md](../../features/gift-cards/FEATURE-SPEC.md)
+  - [/docs/requirements/features/unified-wallet/FEATURE-SPEC.md](../../features/unified-wallet/FEATURE-SPEC.md)
+  - [/docs/requirements/features/unified-wallet/ARCHITECTURE-REVIEW.md](../../features/unified-wallet/ARCHITECTURE-REVIEW.md)
 
 ---
 
 **Document Owner**: Backend Team (Loyalty Squad)
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)

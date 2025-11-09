@@ -1,6 +1,6 @@
 # Database Migrations Guide - NxLoy Platform
 
-**Author**: Ploy Lab (NxLoy Platform)
+ (NxLoy Platform)
 **Last Updated**: 2025-11-07
 **Version**: 1.0.0
 

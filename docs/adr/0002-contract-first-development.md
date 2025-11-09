@@ -3,7 +3,6 @@
 **Date**: 2025-11-06
 **Status**: Accepted
 
-
 ## Context
 
 NxLoy requires **parallel development** across 7 teams/agents:

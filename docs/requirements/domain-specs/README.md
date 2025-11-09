@@ -1,7 +1,7 @@
 # Domain Specifications
 
 **Last Updated**: 2025-11-07
-**Author**: Ploy Lab (NxLoy Platform)
+ (NxLoy Platform)
 
 ## Overview
 

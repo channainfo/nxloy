@@ -4,7 +4,6 @@
 **Date**: 2025-11-06
 **Status**: Active
 **Planning Horizon**: 18 months
-**Author**: Ploy Lab
 
 ## Roadmap Overview
 

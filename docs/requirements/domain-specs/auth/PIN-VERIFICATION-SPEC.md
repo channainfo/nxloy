@@ -3,7 +3,7 @@
 **Version**: 1.0.0
 **Status**: Draft
 **Last Updated**: 2025-11-07
-**Author**: Ploy Lab (NxLoy Platform)
+ (NxLoy Platform)
 
 ---
 

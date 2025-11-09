@@ -3,9 +3,11 @@
 **Status**: 🟢 Approved
 **Priority**: P0 (Critical - MVP Requirement)
 **Phase**: Phase 1
+**Version**: 2.0.0 (Unified Wallet Integration)
 **Teams**: Backend, Web, Mobile, AI/MCP, Infrastructure
 **Estimated Effort**: 3 weeks
 **Target Release**: 2026-Q1
+**Last Updated**: 2025-11-09
 
 ## Overview
 
@@ -23,6 +25,9 @@ Provide a comprehensive reward catalog management system that allows businesses 
 - Support multi-image galleries for visual appeal
 - Manage redemption workflows with approval and audit trails
 - Monitor reward performance and popularity
+- **NEW (v2.0.0)**: Support multi-tender redemptions (points + store credit + digital rewards)
+- **NEW (v2.0.0)**: Issue store credit and digital gift cards as redeemable rewards
+- **NEW (v2.0.0)**: Integrate with unified wallet for balance-aware redemption flows
 
 ### Success Criteria
 
@@ -86,11 +91,14 @@ Provide a comprehensive reward catalog management system that allows businesses 
 - [ ] Support 7 reward types:
   - DISCOUNT (percentage or fixed amount off)
   - FREE_ITEM (specific product/service)
-  - CASHBACK (store credit)
+  - **CASHBACK (store credit)** - v2.0.0: Issues StoreCredit to wallet
   - EXPERIENCE (special event, VIP access)
-  - DIGITAL_GIFT (digital downloads, vouchers)
+  - **DIGITAL_GIFT (digital downloads, vouchers)** - v2.0.0: Issues DigitalReward to wallet
   - POINTS_MULTIPLIER (earn bonus points)
   - EXCLUSIVE_ACCESS (early access, members-only)
+- [ ] **NEW (v2.0.0)**: Support wallet-based redemption (points, store credit, digital rewards, or combination)
+- [ ] **NEW (v2.0.0)**: Real-time wallet balance validation before redemption
+- [ ] **NEW (v2.0.0)**: Multi-currency support for CASHBACK and DIGITAL_GIFT rewards (USD, KHR, SGD)
 - [ ] Hierarchical category system (parent/child categories)
 - [ ] Multi-image support (primary image, gallery, thumbnails)
 - [ ] Inventory management (total available, total redeemed, current stock)
@@ -427,11 +435,41 @@ interface RewardCatalog {
 enum RewardType {
   DISCOUNT = 'DISCOUNT',
   FREE_ITEM = 'FREE_ITEM',
-  CASHBACK = 'CASHBACK',
+  CASHBACK = 'CASHBACK',          // v2.0.0: Issues StoreCredit to wallet
   EXPERIENCE = 'EXPERIENCE',
-  DIGITAL_GIFT = 'DIGITAL_GIFT',
+  DIGITAL_GIFT = 'DIGITAL_GIFT',  // v2.0.0: Issues DigitalReward to wallet
   POINTS_MULTIPLIER = 'POINTS_MULTIPLIER',
   EXCLUSIVE_ACCESS = 'EXCLUSIVE_ACCESS'
+}
+
+// NEW (v2.0.0): Wallet-aware redemption configuration
+interface WalletRedemptionConfig {
+  // Which balance types can be used to redeem this reward
+  allowedBalanceTypes: BalanceType[];  // points, store_credit, digital_rewards
+
+  // Pricing per balance type
+  costInPoints?: number;
+  costInStoreCredit?: Money;  // Multi-currency support
+  costInDigitalRewards?: Money;
+
+  // Can customer combine balance types? (multi-tender)
+  allowMultiTender: boolean;
+
+  // If CASHBACK or DIGITAL_GIFT, what does it issue?
+  issuesStoreCredit?: {
+    amount: Money;
+    currency: Currency;
+    expirationMonths: number;  // Default: 12
+    method: CreditMethod;  // 'cashback_reward'
+  };
+
+  issuesDigitalReward?: {
+    amount: Money;
+    currency: Currency;
+    merchantId?: UUID;  // null = redeemable anywhere
+    expirationMonths: number;  // Default: 12
+    method: RewardMethod;  // 'promotional', 'milestone', etc.
+  };
 }
 
 // Reward status
@@ -801,6 +839,75 @@ FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 ```
 
+### Wallet Integration Flow (NEW v2.0.0)
+
+**Redemption with Wallet Balances**:
+
+```typescript
+// Example: Customer redeems CASHBACK reward using points
+POST /api/v1/redemptions
+{
+  "rewardId": "reward-123",
+  "paymentMethod": {
+    "balanceTypes": ["points"],  // Use only points
+    "pointsToUse": 500
+  }
+}
+
+// Response: StoreCredit issued to wallet
+{
+  "redemptionId": "redemption-456",
+  "redemptionCode": "ABC123XYZ789",
+  "status": "APPROVED",
+  "issuedAssets": [
+    {
+      "type": "store_credit",
+      "storeCreditId": "credit-789",
+      "amount": { "amount": 10.00, "currency": "USD" },
+      "expiresAt": "2026-11-09T00:00:00Z"
+    }
+  ]
+}
+
+// Example: Customer redeems reward using multi-tender (points + store credit)
+POST /api/v1/redemptions
+{
+  "rewardId": "reward-456",
+  "paymentMethod": {
+    "balanceTypes": ["store_credit", "points"],
+    "storeCreditToUse": { "amount": 5.00, "currency": "USD" },
+    "pointsToUse": 250
+  }
+}
+```
+
+**Wallet Balance Check Before Redemption**:
+
+```typescript
+// Check if customer can afford reward
+GET /api/v1/rewards/{id}/affordability?customerId=cust-123
+
+// Response
+{
+  "canAfford": true,
+  "walletBalance": {
+    "points": { "available": 1000, "expiringSoon": 100 },
+    "storeCredit": [
+      { "amount": 15.00, "currency": "USD", "expiringSoon": 5.00 }
+    ],
+    "digitalRewards": [
+      { "amount": 20.00, "currency": "USD", "expiringSoon": 0.00 }
+    ]
+  },
+  "recommendedPayment": {
+    "balanceTypes": ["store_credit", "points"],
+    "storeCreditToUse": { "amount": 5.00, "currency": "USD" },
+    "pointsToUse": 250,
+    "reason": "Uses expiring store credit first (FIFO)"
+  }
+}
+```
+
 ### API Endpoints
 
 **See CONTRACTS.md for full OpenAPI specification**
@@ -826,13 +933,17 @@ Summary of endpoints:
 - `DELETE /api/v1/rewards/categories/{id}` - Delete category
 
 **Redemption Flow**:
-- `POST /api/v1/redemptions` - Redeem reward (customer)
+- `POST /api/v1/redemptions` - Redeem reward (customer) - **v2.0.0: Supports wallet balances**
 - `GET /api/v1/redemptions` - List redemptions (customer history)
 - `GET /api/v1/redemptions/{code}` - Lookup by redemption code
 - `POST /api/v1/redemptions/{id}/approve` - Approve redemption (staff)
 - `POST /api/v1/redemptions/{id}/reject` - Reject redemption (staff)
 - `POST /api/v1/redemptions/{id}/mark-redeemed` - Mark as used (staff)
 - `POST /api/v1/redemptions/{id}/cancel` - Cancel redemption
+
+**NEW (v2.0.0): Wallet Integration**:
+- `GET /api/v1/rewards/{id}/affordability` - Check if customer can afford reward with current wallet balance
+- `POST /api/v1/rewards/{id}/recommend-payment` - Get recommended payment mix (optimize for expiring balances)
 
 ### Domain Events
 
@@ -857,6 +968,12 @@ Summary of events:
 - `rewards.redemption.expired` - When redemption expires unused
 - `rewards.redemption.cancelled` - When redemption is cancelled
 
+**NEW (v2.0.0): Wallet Integration Events**:
+- `rewards.redemption.store_credit_issued` - When CASHBACK reward issues store credit
+- `rewards.redemption.digital_reward_issued` - When DIGITAL_GIFT reward issues digital reward
+- `rewards.redemption.wallet_payment_processed` - When multi-tender payment completes
+- `rewards.redemption.wallet_payment_failed` - When multi-tender payment fails (insufficient balance, etc.)
+
 ## Dependencies
 
 ### Internal Dependencies
@@ -866,6 +983,9 @@ Summary of events:
 - **Business Management**: Rewards belong to businesses (must exist first)
 - **Authentication**: JWT tokens for API access (must exist first)
 - **Authorization**: Business ownership validation (must exist first)
+- **NEW (v2.0.0): Unified Wallet**: Multi-tender redemptions use WalletRedemptionService (parallel development OK)
+- **NEW (v2.0.0): Store Credit**: CASHBACK rewards issue store credit to wallet (parallel development OK)
+- **NEW (v2.0.0): Digital Rewards**: DIGITAL_GIFT rewards issue digital rewards to wallet (parallel development OK)
 
 ### External Dependencies
 
@@ -1024,14 +1144,27 @@ See Loyalty Programs feature spec for standard stakeholder list.
 - [Feature Spec: Loyalty Programs](/docs/requirements/features/loyalty-programs/FEATURE-SPEC.md)
 - [CONTRACTS.md: OpenAPI Specification](/docs/contracts/CONTRACTS.md)
 
+**NEW (v2.0.0): Wallet Integration**:
+- [Feature Spec: Store Credit](/docs/requirements/features/store-credit/FEATURE-SPEC.md) - CASHBACK reward integration
+- [Feature Spec: Gift Cards](/docs/requirements/features/gift-cards/FEATURE-SPEC.md) - DIGITAL_GIFT reward integration
+- [Feature Spec: Unified Wallet](/docs/requirements/features/unified-wallet/FEATURE-SPEC.md) - Multi-tender redemption flows
+- [Architecture Review: Unified Wallet](/docs/requirements/features/unified-wallet/ARCHITECTURE-REVIEW.md) - Technical considerations
+
+**Domain Model**:
+- [Loyalty Domain: Entities](/docs/requirements/domain-specs/loyalty/ENTITIES.md) - StoreCredit, DigitalReward entities
+- [Loyalty Domain: Value Objects](/docs/requirements/domain-specs/loyalty/VALUE-OBJECTS.md) - WalletBalance, Money
+- [Loyalty Domain: Business Rules](/docs/requirements/domain-specs/loyalty/BUSINESS-RULES.md) - FIFO redemption rules
+- [Loyalty Domain: Domain Events](/docs/requirements/domain-specs/loyalty/DOMAIN-EVENTS.md) - Wallet integration events
+
 ## Change Log
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
 | 2025-11-06 | 1.0.0 | Initial draft | Ploy Lab |
+| 2025-11-09 | 2.0.0 | Added unified wallet integration: multi-tender redemptions, store credit/digital reward issuance, wallet balance checks | Claude Code |
 
 ---
 
-**Last Updated**: 2025-11-06
-**Next Review**: 2025-11-13
+**Last Updated**: 2025-11-09
+**Next Review**: 2025-11-16
 **Document Owner**: Backend Team

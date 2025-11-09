@@ -1,12 +1,19 @@
 # Loyalty Domain - Value Objects
 
 **Domain**: Loyalty
-**Last Updated**: 2025-11-07
-**Author**: Ploy Lab (NxLoy Platform)
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)
 
 ## Overview
 
 Value Objects in the Loyalty domain are immutable objects defined by their attributes rather than identity. They encapsulate domain concepts and validation logic.
+
+**v2.0.0 Changes**:
+- Updated `Money` value object to support ASEAN currencies (KHR, SGD, THB, VND, MYR, PHP, IDR)
+- Added `WalletBalance` value object for unified balance representation
+- Added `DepletionOrder` value object for multi-tender redemption rules
+- Added `ExpirationPolicy` value object for credit/reward expiration management
+- Added `MultiCurrencyBalance` value object for currency-grouped balances
 
 ## Core Value Objects
 
@@ -381,18 +388,21 @@ class DateRange {
 
 ---
 
-### 8. Money
+### 8. Money (Updated v2.0.0)
 
-**Purpose**: Represents monetary values with currency
+**Purpose**: Represents monetary values with currency (ASEAN currencies supported)
 
 ```typescript
+type Currency = 'USD' | 'KHR' | 'SGD' | 'THB' | 'VND' | 'MYR' | 'PHP' | 'IDR' | 'EUR' | 'GBP';
+
 class Money {
   constructor(
     public readonly amount: number,
-    public readonly currency: string = 'USD'
+    public readonly currency: Currency = 'USD'
   ) {
     if (amount < 0) throw new Error('Amount cannot be negative');
     if (!this.isValidCurrency(currency)) throw new Error('Invalid currency');
+    this.validatePrecision();
   }
 
   public add(other: Money): Money {
@@ -415,17 +425,451 @@ class Money {
     return this.amount > other.amount;
   }
 
+  public greaterThanOrEqual(other: Money): boolean {
+    this.assertSameCurrency(other);
+    return this.amount >= other.amount;
+  }
+
+  public lessThan(other: Money): boolean {
+    this.assertSameCurrency(other);
+    return this.amount < other.amount;
+  }
+
+  public equals(other: Money): boolean {
+    return this.currency === other.currency && this.amount === other.amount;
+  }
+
+  public toDisplay(): string {
+    const decimals = this.getDecimalPlaces();
+    return `${this.getCurrencySymbol()}${this.amount.toFixed(decimals)}`;
+  }
+
   private assertSameCurrency(other: Money): void {
     if (this.currency !== other.currency) {
-      throw new Error('Cannot operate on different currencies');
+      throw new Error(`Cannot operate on different currencies: ${this.currency} vs ${other.currency}`);
     }
   }
 
   private isValidCurrency(currency: string): boolean {
-    return ['USD', 'EUR', 'GBP', 'CAD', 'AUD'].includes(currency);
+    return ['USD', 'KHR', 'SGD', 'THB', 'VND', 'MYR', 'PHP', 'IDR', 'EUR', 'GBP'].includes(currency);
+  }
+
+  private validatePrecision(): void {
+    const decimals = this.getDecimalPlaces();
+    const rounded = parseFloat(this.amount.toFixed(decimals));
+    if (rounded !== this.amount) {
+      throw new Error(`Amount has too many decimal places for ${this.currency} (max: ${decimals})`);
+    }
+  }
+
+  private getDecimalPlaces(): number {
+    // ASEAN currencies with 0 decimals: KHR, VND, IDR
+    if (['KHR', 'VND', 'IDR'].includes(this.currency)) {
+      return 0;
+    }
+    // All other currencies: 2 decimals
+    return 2;
+  }
+
+  private getCurrencySymbol(): string {
+    const symbols: Record<Currency, string> = {
+      'USD': '$',
+      'KHR': '៛',
+      'SGD': 'S$',
+      'THB': '฿',
+      'VND': '₫',
+      'MYR': 'RM',
+      'PHP': '₱',
+      'IDR': 'Rp',
+      'EUR': '€',
+      'GBP': '£'
+    };
+    return symbols[this.currency] || this.currency;
+  }
+
+  public static zero(currency: Currency = 'USD'): Money {
+    return new Money(0, currency);
+  }
+
+  public static fromCents(cents: number, currency: Currency = 'USD'): Money {
+    if (['KHR', 'VND', 'IDR'].includes(currency)) {
+      // These currencies don't use cents/decimals
+      return new Money(cents, currency);
+    }
+    return new Money(cents / 100, currency);
   }
 }
 ```
+
+**Invariants** (v2.0.0):
+- Amount ≥ 0
+- Currency must be valid ASEAN or international currency
+- Decimal precision: 0 for KHR/VND/IDR, 2 for all others
+- Cannot mix currencies in operations
+
+---
+
+### 9. WalletBalance (NEW v2.0.0)
+
+**Purpose**: Unified representation of all customer loyalty assets
+
+```typescript
+class WalletBalance {
+  constructor(
+    public readonly points: PointBalance,
+    public readonly storeCredit: MultiCurrencyBalance,
+    public readonly digitalRewards: MultiCurrencyBalance,
+    public readonly totalValueUsd: Money,
+    public readonly lastUpdatedAt: Date
+  ) {}
+
+  public hasAnyBalance(): boolean {
+    return this.points.availablePoints > 0 ||
+           this.storeCredit.hasAnyBalance() ||
+           this.digitalRewards.hasAnyBalance();
+  }
+
+  public hasExpiringSoon(days: number = 30): boolean {
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() + days);
+
+    return (this.points.expiringAt && this.points.expiringAt <= threshold) ||
+           this.storeCredit.hasExpiringSoon(threshold) ||
+           this.digitalRewards.hasExpiringSoon(threshold);
+  }
+
+  public calculateTotalValue(pointsToUsdRate: number): Money {
+    const pointsValue = this.points.availablePoints * pointsToUsdRate;
+    const storeCreditValue = this.storeCredit.getTotalInUsd();
+    const digitalRewardsValue = this.digitalRewards.getTotalInUsd();
+
+    return new Money(pointsValue + storeCreditValue + digitalRewardsValue, 'USD');
+  }
+
+  public getExpiringValue(days: number = 30): Money {
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() + days);
+
+    let totalExpiring = 0;
+
+    if (this.points.expiringAt && this.points.expiringAt <= threshold) {
+      totalExpiring += this.points.expiringSoon * 0.01; // Assuming 1 point = $0.01
+    }
+
+    totalExpiring += this.storeCredit.getExpiringValue(threshold);
+    totalExpiring += this.digitalRewards.getExpiringValue(threshold);
+
+    return new Money(totalExpiring, 'USD');
+  }
+}
+```
+
+**Business Rules**:
+- Aggregates balances from Points, StoreCredit, DigitalRewards services
+- Total value calculated in USD for display purposes
+- Expiring soon defined as within 30 days
+- Immutable snapshot (updated via new instance)
+
+---
+
+### 10. MultiCurrencyBalance (NEW v2.0.0)
+
+**Purpose**: Represents balances grouped by currency
+
+```typescript
+interface CurrencyBalance {
+  currency: Currency;
+  balance: Money;
+  expiringBalances: Array<{
+    amount: Money;
+    expiresAt: Date;
+  }>;
+}
+
+class MultiCurrencyBalance {
+  constructor(
+    public readonly balances: CurrencyBalance[]
+  ) {
+    this.validateNoDuplicateCurrencies();
+  }
+
+  public getBalance(currency: Currency): Money {
+    const currencyBalance = this.balances.find(b => b.currency === currency);
+    return currencyBalance ? currencyBalance.balance : Money.zero(currency);
+  }
+
+  public hasAnyBalance(): boolean {
+    return this.balances.some(b => b.balance.amount > 0);
+  }
+
+  public hasBalanceInCurrency(currency: Currency): boolean {
+    const balance = this.getBalance(currency);
+    return balance.amount > 0;
+  }
+
+  public hasExpiringSoon(threshold: Date): boolean {
+    return this.balances.some(b =>
+      b.expiringBalances.some(e => e.expiresAt <= threshold && e.amount.amount > 0)
+    );
+  }
+
+  public getExpiringValue(threshold: Date): number {
+    return this.balances.reduce((total, b) => {
+      const expiring = b.expiringBalances
+        .filter(e => e.expiresAt <= threshold)
+        .reduce((sum, e) => sum + this.convertToUsd(e.amount), 0);
+      return total + expiring;
+    }, 0);
+  }
+
+  public getTotalInUsd(): number {
+    return this.balances.reduce((total, b) => {
+      return total + this.convertToUsd(b.balance);
+    }, 0);
+  }
+
+  private validateNoDuplicateCurrencies(): void {
+    const currencies = this.balances.map(b => b.currency);
+    const uniqueCurrencies = new Set(currencies);
+    if (currencies.length !== uniqueCurrencies.size) {
+      throw new Error('Duplicate currencies not allowed in MultiCurrencyBalance');
+    }
+  }
+
+  private convertToUsd(money: Money): number {
+    // Note: In production, use actual exchange rates from exchange rate service
+    // This is a simplified example using hardcoded rates
+    const rates: Record<Currency, number> = {
+      'USD': 1.0,
+      'KHR': 0.00025,  // 1 KHR = $0.00025 (approx 4000 KHR = $1)
+      'SGD': 0.75,     // 1 SGD = $0.75
+      'THB': 0.029,    // 1 THB = $0.029
+      'VND': 0.000041, // 1 VND = $0.000041
+      'MYR': 0.22,     // 1 MYR = $0.22
+      'PHP': 0.018,    // 1 PHP = $0.018
+      'IDR': 0.000063, // 1 IDR = $0.000063
+      'EUR': 1.10,     // 1 EUR = $1.10
+      'GBP': 1.27      // 1 GBP = $1.27
+    };
+    return money.amount * rates[money.currency];
+  }
+
+  public static empty(): MultiCurrencyBalance {
+    return new MultiCurrencyBalance([]);
+  }
+
+  public static fromSingleCurrency(balance: Money, expiringBalances: Array<{ amount: Money; expiresAt: Date }> = []): MultiCurrencyBalance {
+    return new MultiCurrencyBalance([{
+      currency: balance.currency,
+      balance,
+      expiringBalances
+    }]);
+  }
+}
+```
+
+**Business Rules**:
+- Each currency appears at most once
+- Balance operations are currency-specific
+- USD conversion uses snapshot exchange rates (not real-time)
+- Empty balance is valid state
+
+---
+
+### 11. DepletionOrder (NEW v2.0.0)
+
+**Purpose**: Defines order in which balance types are used during multi-tender redemption
+
+```typescript
+enum BalanceType {
+  DIGITAL_REWARDS = 'digital_rewards',
+  STORE_CREDIT = 'store_credit',
+  POINTS = 'points',
+  CASH = 'cash'
+}
+
+interface DepletionRule {
+  type: BalanceType;
+  priority: number;  // Lower = higher priority (1 = first)
+  conditions?: {
+    minTransactionAmount?: Money;
+    minRedemptionPoints?: number;
+    maxRedemptionPercentage?: number; // e.g., 50 = max 50% of cart can be loyalty
+  };
+}
+
+class DepletionOrder {
+  constructor(
+    public readonly rules: DepletionRule[],
+    public readonly expirationOverride: boolean
+  ) {
+    this.validateRules();
+  }
+
+  public getSortedRules(): DepletionRule[] {
+    return [...this.rules].sort((a, b) => a.priority - b.priority);
+  }
+
+  public getNextBalanceType(usedTypes: BalanceType[]): BalanceType | null {
+    const sortedRules = this.getSortedRules();
+    const nextRule = sortedRules.find(rule => !usedTypes.includes(rule.type));
+    return nextRule ? nextRule.type : null;
+  }
+
+  public canUseBalanceType(
+    type: BalanceType,
+    cartTotal: Money,
+    remainingAmount: Money
+  ): boolean {
+    const rule = this.rules.find(r => r.type === type);
+    if (!rule || !rule.conditions) return true;
+
+    const conditions = rule.conditions;
+
+    // Check min transaction amount
+    if (conditions.minTransactionAmount) {
+      if (cartTotal.lessThan(conditions.minTransactionAmount)) {
+        return false;
+      }
+    }
+
+    // Check max redemption percentage
+    if (conditions.maxRedemptionPercentage) {
+      const maxRedemption = cartTotal.multiply(conditions.maxRedemptionPercentage / 100);
+      const alreadyRedeemed = cartTotal.subtract(remainingAmount);
+      if (alreadyRedeemed.greaterThanOrEqual(maxRedemption)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private validateRules(): void {
+    // Check for duplicate priorities
+    const priorities = this.rules.map(r => r.priority);
+    const uniquePriorities = new Set(priorities);
+    if (priorities.length !== uniquePriorities.size) {
+      throw new Error('Duplicate priorities not allowed in DepletionOrder');
+    }
+
+    // Check for duplicate balance types
+    const types = this.rules.map(r => r.type);
+    const uniqueTypes = new Set(types);
+    if (types.length !== uniqueTypes.size) {
+      throw new Error('Duplicate balance types not allowed in DepletionOrder');
+    }
+
+    // Ensure all balance types are present
+    const requiredTypes = Object.values(BalanceType);
+    const missingTypes = requiredTypes.filter(t => !types.includes(t));
+    if (missingTypes.length > 0) {
+      throw new Error(`Missing required balance types: ${missingTypes.join(', ')}`);
+    }
+  }
+
+  public static default(): DepletionOrder {
+    return new DepletionOrder([
+      { type: BalanceType.DIGITAL_REWARDS, priority: 1 },
+      { type: BalanceType.STORE_CREDIT, priority: 2 },
+      { type: BalanceType.POINTS, priority: 3 },
+      { type: BalanceType.CASH, priority: 4 }
+    ], true);  // Expiration override enabled by default
+  }
+}
+```
+
+**Business Rules**:
+- Each balance type must have unique priority
+- Lower priority number = used first (1 = highest priority)
+- All balance types must be present in rules
+- Conditions are optional (no conditions = always eligible)
+- Expiration override: if true, use soonest-to-expire first regardless of priority
+
+---
+
+### 12. ExpirationPolicy (NEW v2.0.0)
+
+**Purpose**: Encapsulates expiration logic for store credits and digital rewards
+
+```typescript
+class ExpirationPolicy {
+  constructor(
+    public readonly expirationMonths: number,
+    public readonly gracePeriodDays: number,
+    public readonly notificationDays: number[]  // Days before expiration to notify (e.g., [30, 7, 1])
+  ) {
+    if (expirationMonths < 1) throw new Error('Expiration months must be at least 1');
+    if (gracePeriodDays < 0) throw new Error('Grace period cannot be negative');
+    if (notificationDays.some(d => d < 0)) throw new Error('Notification days cannot be negative');
+  }
+
+  public calculateExpirationDate(issuedAt: Date): Date {
+    const expiresAt = new Date(issuedAt);
+    expiresAt.setMonth(expiresAt.getMonth() + this.expirationMonths);
+    return expiresAt;
+  }
+
+  public calculateGracePeriodEnd(expiresAt: Date): Date {
+    const gracePeriodEnds = new Date(expiresAt);
+    gracePeriodEnds.setDate(gracePeriodEnds.getDate() + this.gracePeriodDays);
+    return gracePeriodEnds;
+  }
+
+  public shouldNotify(expiresAt: Date, lastNotifiedDaysBefore?: number): number | null {
+    const now = new Date();
+    const daysUntilExpiration = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Find the next notification threshold
+    const nextThreshold = this.notificationDays
+      .filter(days => days >= daysUntilExpiration)
+      .filter(days => !lastNotifiedDaysBefore || days < lastNotifiedDaysBefore)
+      .sort((a, b) => b - a)[0];  // Get largest threshold that hasn't been notified
+
+    return nextThreshold !== undefined ? nextThreshold : null;
+  }
+
+  public getStatus(expiresAt: Date, gracePeriodEndsAt: Date): 'active' | 'expired' | 'grace_period' | 'fully_expired' {
+    const now = new Date();
+
+    if (now < expiresAt) {
+      return 'active';
+    } else if (now < gracePeriodEndsAt) {
+      return 'grace_period';  // Past expiration but within grace period
+    } else {
+      return 'fully_expired';  // Past grace period
+    }
+  }
+
+  public isRedeemable(expiresAt: Date, gracePeriodEndsAt: Date): boolean {
+    const status = this.getStatus(expiresAt, gracePeriodEndsAt);
+    return status === 'active' || status === 'grace_period';
+  }
+
+  public static default(): ExpirationPolicy {
+    return new ExpirationPolicy(
+      12,        // 12 months expiration
+      30,        // 30 days grace period
+      [30, 7, 1] // Notify at 30, 7, and 1 day before expiration
+    );
+  }
+
+  public static noExpiration(): ExpirationPolicy {
+    return new ExpirationPolicy(
+      999 * 12,  // 999 years = effectively no expiration
+      0,         // No grace period needed
+      []         // No expiration notifications
+    );
+  }
+}
+```
+
+**Business Rules**:
+- Expiration date = issued date + expiration months
+- Grace period end = expiration date + grace period days
+- Status transitions: active → expired (grace_period) → fully_expired
+- Redemption allowed during active and grace_period statuses
+- Notifications sent at configured thresholds (e.g., 30, 7, 1 days before expiration)
 
 ---
 
@@ -438,6 +882,8 @@ class Money {
 5. **Behavior-Rich**: Encapsulate domain logic
 
 ## Usage Examples
+
+### Existing Value Objects
 
 ```typescript
 // Creating a point balance
@@ -464,13 +910,91 @@ if (programPeriod.contains(new Date())) {
 }
 ```
 
+### NEW Wallet Value Objects (v2.0.0)
+
+```typescript
+// Money with ASEAN currencies
+const usdAmount = new Money(100.00, 'USD');
+const khrAmount = new Money(400000, 'KHR');  // No decimals for KHR
+const sgdAmount = new Money(75.50, 'SGD');
+
+console.log(usdAmount.toDisplay());  // "$100.00"
+console.log(khrAmount.toDisplay());  // "៛400000"
+console.log(sgdAmount.toDisplay());  // "S$75.50"
+
+// Multi-currency balance
+const multiCurrency = new MultiCurrencyBalance([
+  {
+    currency: 'USD',
+    balance: new Money(45.00, 'USD'),
+    expiringBalances: [
+      { amount: new Money(10.00, 'USD'), expiresAt: new Date('2025-12-01') }
+    ]
+  },
+  {
+    currency: 'KHR',
+    balance: new Money(40000, 'KHR'),
+    expiringBalances: []
+  }
+]);
+
+console.log(multiCurrency.getTotalInUsd());  // ~55.00
+console.log(multiCurrency.hasBalanceInCurrency('SGD'));  // false
+
+// Wallet balance (unified view)
+const wallet = new WalletBalance(
+  new PointBalance(1500, 1500, 0, 200, new Date('2025-12-31')),
+  multiCurrency,  // Store credit
+  MultiCurrencyBalance.fromSingleCurrency(new Money(25.00, 'USD')),  // Digital rewards
+  new Money(95.00, 'USD'),  // Total value
+  new Date()
+);
+
+console.log(wallet.hasAnyBalance());  // true
+console.log(wallet.hasExpiringSoon(30));  // true
+
+// Depletion order configuration
+const depletionOrder = DepletionOrder.default();
+// Priority: 1. Digital Rewards → 2. Store Credit → 3. Points → 4. Cash
+
+const sortedRules = depletionOrder.getSortedRules();
+console.log(sortedRules[0].type);  // 'digital_rewards'
+
+// Check if can use balance type
+const canUse = depletionOrder.canUseBalanceType(
+  BalanceType.POINTS,
+  new Money(100.00, 'USD'),  // Cart total
+  new Money(50.00, 'USD')    // Remaining after digital rewards + store credit
+);
+
+// Expiration policy
+const expirationPolicy = ExpirationPolicy.default();
+const issuedAt = new Date();
+const expiresAt = expirationPolicy.calculateExpirationDate(issuedAt);
+const gracePeriodEnds = expirationPolicy.calculateGracePeriodEnd(expiresAt);
+
+console.log(expiresAt);  // 12 months from now
+console.log(gracePeriodEnds);  // 12 months + 30 days from now
+
+const status = expirationPolicy.getStatus(expiresAt, gracePeriodEnds);
+console.log(status);  // 'active'
+
+const shouldNotify = expirationPolicy.shouldNotify(expiresAt);
+console.log(shouldNotify);  // 30 (notify 30 days before expiration)
+```
+
 ## References
 
 - [ENTITIES.md](./ENTITIES.md)
 - [AGGREGATES.md](./AGGREGATES.md)
 - [DOMAIN-SERVICES.md](./DOMAIN-SERVICES.md)
+- **NEW (v2.0.0)**:
+  - [/docs/requirements/features/store-credit/FEATURE-SPEC.md](../../features/store-credit/FEATURE-SPEC.md)
+  - [/docs/requirements/features/gift-cards/FEATURE-SPEC.md](../../features/gift-cards/FEATURE-SPEC.md)
+  - [/docs/requirements/features/unified-wallet/FEATURE-SPEC.md](../../features/unified-wallet/FEATURE-SPEC.md)
 
 ---
 
 **Document Owner**: Backend Team (Loyalty Squad)
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-11-09
+**Version**: 2.0.0 (Unified Wallet Update)

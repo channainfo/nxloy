@@ -1,24 +1,24 @@
 # NxLoy Terminology Reference
 
-**Version**: 1.0.0
-**Date**: 2025-11-06
+**Version**: 2.0.0
+**Date**: 2025-11-09
 **Purpose**: Standardized terminology for the NxLoy loyalty platform
-**Author**: Ploy Lab
 
 ## Table of Contents
 
 1. [Core Platform Terms](#core-platform-terms)
 2. [Loyalty System Terms](#loyalty-system-terms)
 3. [Reward System Terms](#reward-system-terms)
-4. [Customer Management Terms](#customer-management-terms)
-5. [Business Management Terms](#business-management-terms)
-6. [Partner Network Terms](#partner-network-terms)
-7. [Subscription Terms](#subscription-terms)
-8. [Referral Terms](#referral-terms)
-9. [Blockchain/NFT Terms](#blockchainnft-terms)
-10. [Technical Terms](#technical-terms)
-11. [Analytics Terms](#analytics-terms)
-12. [Industry Variations](#industry-variations)
+4. **[Wallet System Terms](#wallet-system-terms)** ← NEW (v2.0.0)
+5. [Customer Management Terms](#customer-management-terms)
+6. [Business Management Terms](#business-management-terms)
+7. [Partner Network Terms](#partner-network-terms)
+8. [Subscription Terms](#subscription-terms)
+9. [Referral Terms](#referral-terms)
+10. [Blockchain/NFT Terms](#blockchainnft-terms)
+11. [Technical Terms](#technical-terms)
+12. [Analytics Terms](#analytics-terms)
+13. [Industry Variations](#industry-variations)
 
 ---
 
@@ -143,6 +143,187 @@ interface IndustryTerms {
 - **Redemption History**: Record of all redeemed rewards
 - **Redemption Code**: Unique code for reward validation
 - **Expiration**: Time limit for using redeemed reward
+
+---
+
+## Wallet System Terms
+
+**NEW (v2.0.0)**: Unified wallet supporting multiple balance types for earning and redemption.
+
+### Core Wallet Concepts
+
+- **Unified Wallet**: Single interface aggregating all customer balance types (points, store credit, digital rewards)
+- **Wallet Balance**: Computed total value across all balance types
+- **Multi-Currency Balance**: Balance amounts grouped by currency (USD, KHR, SGD, etc.)
+- **Balance Type**: Category of redeemable value (points, store_credit, digital_rewards, cash)
+- **Wallet View**: Read-only aggregate of all customer balances (no persistence)
+
+### Store Credit Terms
+
+**Definition**: Monetary value issued to customers as loyalty rewards, refunds, or promotional credits
+
+**Customer Facing**:
+- "You have $10.00 in store credit"
+- "Earn store credit as a loyalty reward"
+- "Use your store credit on your next purchase"
+
+**Technical Terms**:
+- **Store Credit**: Monetary value credited to customer wallet
+- **Credit Balance**: Remaining usable amount
+- **Credit Method**: How credit was issued (promotional, refund, cashback_reward, automated)
+- **FIFO Redemption**: First-In-First-Out redemption order (earliest expiration first)
+- **Credit Status**: ACTIVE, EXPIRED, GRACE_PERIOD, FULLY_EXPIRED
+- **Grace Period**: 30-day window after expiration where credit can still be used
+- **Breakage**: Unredeemed credit that expires (recognized as revenue)
+- **Breakage Rate**: Percentage of issued credit that expires unused
+
+**Issuance Methods**:
+- **Promotional**: Marketing campaign credit
+- **Refund**: Credit issued for returned purchases
+- **Cashback Reward**: Points converted to store credit
+- **Automated**: System-generated credit (e.g., signup bonus)
+
+**Customer Facing Messages**:
+- "Your store credit expires in 30 days"
+- "You're in the grace period - use your credit before [date]"
+- "$5.00 in store credit is expiring soon!"
+
+### Digital Gift Cards / Digital Rewards Terms
+
+**Definition**: Digital vouchers issued as loyalty rewards (NOT purchased gift cards in Phase 1)
+
+**Important**: Phase 1 digital rewards are **loyalty program benefits only**, not purchased gift cards. This positioning avoids Philippines Gift Check Act restrictions.
+
+**Customer Facing**:
+- "You earned a $20 Starbucks reward"
+- "Redeem your digital reward at any participating location"
+- "Your digital reward expires in 12 months"
+
+**Technical Terms**:
+- **Digital Reward**: Digital voucher issued as loyalty benefit
+- **Reward Balance**: Remaining usable amount
+- **Reward Method**: How reward was issued (promotional, referral, milestone, compensation)
+- **Merchant-Specific Reward**: Redeemable only at designated merchant
+- **Generic Reward**: Redeemable at any participating merchant
+- **Partner Reward**: Redeemable at partner merchant network
+- **Reward Status**: ACTIVE, EXPIRED, GRACE_PERIOD, FULLY_EXPIRED
+
+**Merchant Restriction Terms**:
+- **Merchant ID**: Specific merchant where reward can be redeemed
+- **Partner ID**: Partner network where reward is valid
+- **Generic Reward**: No merchant restriction (merchant_id = null)
+- **Merchant Priority**: Merchant-specific rewards deplete before generic rewards (FIFO with priority)
+
+**Customer Facing Messages**:
+- "This reward is valid at [Merchant Name] only"
+- "Redeem at any of our partner locations"
+- "Use this reward anywhere in our network"
+
+### Multi-Tender Redemption Terms
+
+**Definition**: Combining multiple balance types in a single transaction
+
+**Customer Facing**:
+- "Pay with points + store credit + cash"
+- "Use your loyalty rewards together"
+- "Combine balances to save more"
+
+**Technical Terms**:
+- **Multi-Tender**: Payment using multiple balance types
+- **Depletion Order**: Priority order for redeeming balance types (default: digital rewards → store credit → points → cash)
+- **Balance Type Priority**: Ranking determining which balance depletes first
+- **Expiration Override**: FIFO takes precedence over depletion order (expiring balances used first)
+- **Saga Pattern**: Distributed transaction ensuring atomicity across balance types
+- **Compensating Transaction**: Rollback action if multi-tender fails
+- **Redemption Breakdown**: Itemized list showing amount from each balance type
+
+**Depletion Order Rules**:
+- **Default Order**: Digital rewards (1) → Store credit (2) → Points (3) → Cash (4)
+- **Expiration Priority**: Earliest expiring balance used first (overrides default order)
+- **Merchant Priority**: Merchant-specific digital rewards before generic rewards
+
+**Customer Facing Messages**:
+- "Your payment breakdown: $5 store credit + $3 digital reward + $2 cash"
+- "We applied your expiring store credit first"
+- "Merchant reward applied before generic reward"
+
+### Expiration and Grace Period Terms
+
+**Expiration Policy**:
+- **Expiration Date**: 12 months from issuance (default)
+- **Grace Period**: 30 days after expiration
+- **Grace Period End Date**: Final date before breakage
+- **Expiration Warning**: Notification sent at 30, 7, and 1 days before expiration
+
+**Status Transitions**:
+- **ACTIVE**: Before expiration date (fully usable)
+- **EXPIRED**: After expiration date, during grace period (still usable)
+- **GRACE_PERIOD**: Same as EXPIRED (alternative term)
+- **FULLY_EXPIRED**: After grace period ends (becomes breakage, no longer usable)
+
+**Customer Facing Messages**:
+- "Your credit expires on [date]"
+- "You have $10 expiring in 7 days"
+- "Grace period: Use by [date] or lose it"
+- "This credit has expired and cannot be used"
+
+### Multi-Currency Support Terms
+
+**Supported Currencies**:
+- **USD**: US Dollar (primary currency, 2 decimals)
+- **KHR**: Cambodian Riel (home base, 0 decimals)
+- **SGD**: Singapore Dollar (primary expansion, 2 decimals)
+- **THB**: Thai Baht (ASEAN expansion, 2 decimals)
+- **VND**: Vietnamese Dong (ASEAN expansion, 0 decimals)
+- **MYR**: Malaysian Ringgit (ASEAN expansion, 2 decimals)
+- **PHP**: Philippine Peso (ASEAN expansion, 2 decimals)
+- **IDR**: Indonesian Rupiah (ASEAN expansion, 0 decimals)
+
+**Currency Rules**:
+- **Currency Locking**: Exchange rate locked at issuance (no post-issuance conversion)
+- **Separate Balances**: Each currency maintained separately
+- **Decimal Precision**: 0 decimals for KHR/VND/IDR, 2 decimals for all others
+- **Currency Display**: Native symbol (៛ for KHR, S$ for SGD, etc.)
+
+**Customer Facing Messages**:
+- "You have ៛40,000 in store credit" (KHR, 0 decimals)
+- "You have S$10.50 in store credit" (SGD, 2 decimals)
+- "Balances: $15 USD + ៛60,000 KHR"
+
+### Compliance and Regulatory Terms
+
+**ASEAN Compliance**:
+- **Loyalty Program Benefit**: Structure that maximizes regulatory exemptions
+- **Non-Purchased Credit**: Credit earned (not bought) to avoid gift card regulations
+- **Philippines Gift Check Act**: Regulation requiring no expiration on purchased gift cards (avoided by loyalty structure)
+- **IFRS 15 / SFRS(I) 15**: Revenue recognition accounting standards
+- **Breakage Revenue**: Revenue recognized when credit expires
+- **Deferred Revenue Liability**: Credit recorded as liability until redeemed or expired
+
+**Accounting Treatment**:
+- **On Issuance**: Debit Cash (or Points Expense), Credit Deferred Revenue Liability
+- **On Redemption**: Debit Deferred Revenue, Credit Revenue
+- **On Breakage**: Debit Deferred Revenue, Credit Breakage Revenue
+- **Remote Method**: Breakage recognition approach (recognize at expiration)
+
+**Customer Facing** (Compliance):
+- "This store credit is a loyalty program benefit"
+- "Earned as part of our rewards program"
+- "Subject to program terms and expiration policy"
+
+### Wallet Integration Terms (Technical)
+
+**Architecture**:
+- **Virtual Aggregate**: Wallet represented as computed view (no persistence)
+- **Composite Repository**: Repository aggregating multiple underlying services
+- **Distributed Locking**: Redis Redlock preventing concurrent redemption conflicts
+- **FIFO Query**: Database query sorting by expiration date ASC
+- **Saga Coordinator**: Service orchestrating multi-tender transactions
+
+**Performance**:
+- **Cache TTL**: 5-minute time-to-live for wallet balance cache
+- **Event-Driven Invalidation**: Cache cleared on balance change events
+- **Indexed Queries**: Database indexes optimized for FIFO redemption
 
 ---
 

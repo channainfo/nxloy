@@ -1,7 +1,7 @@
 # Feature Documentation Guide
 
 **Last Updated**: 2025-11-06
-**Author**: Ploy Lab
+
 
 ## Overview
 

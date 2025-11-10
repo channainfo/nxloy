@@ -51,6 +51,22 @@ Traditional loyalty programs face critical challenges:
 
 ## Solution Overview
 
+### Strategic Context: Two-Stage Growth Model
+
+The Viral Growth Suite implements NxLoy's **Acquire + Migrate** strategy:
+
+**Stage 1: Viral Acquisition (Leverage Social Media)**
+- Use Instagram, TikTok, WhatsApp, Facebook for customer discovery
+- Viral sharing, UGC, influencers, challenges drive organic growth
+- Target: 40-60% CAC reduction (from $30 paid ads → $12-18 viral)
+
+**Stage 2: Owned Channel Migration (Build Direct Relationships)**
+- Migrate customers to owned channels: mobile app, email, SMS, web dashboard
+- In-app social feed (Phase 5) creates owned community
+- Reduce dependency on social platforms for engagement
+
+**Key Principle**: Social media is the **acquisition engine**, not the **retention platform**. We use viral mechanics to acquire customers cheaply, then migrate them to owned channels where we control the relationship and maximize LTV.
+
 ### The Viral Growth Engine
 
 The Viral Growth Suite creates a self-reinforcing viral loop:

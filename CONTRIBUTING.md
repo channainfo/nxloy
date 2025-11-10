@@ -96,14 +96,15 @@ git push origin feature/your-feature-name
 
 ## 🤖 Custom Claude Agents
 
-NxLoy provides 6 specialized AI agents for code review and implementation:
+NxLoy provides 7 specialized AI agents for code review and implementation:
 
 1. **backend-code-reviewer** - NestJS backend code review
 2. **frontend-implementation-specialist** - Cross-platform features (Next.js + React Native)
 3. **architecture-reviewer** - Architecture and security analysis
 4. **blockchain-nft-code-reviewer** - Smart contract and Web3 review
 5. **ai-mcp-genai-reviewer** - AI/MCP code review
-6. **product-market-researcher** - Market validation and competitive analysis
+6. **compliance-standards-enforcer** - Financial compliance and regulatory requirements
+7. **product-market-researcher** - Market validation and competitive analysis
 
 **Full guide**: [Custom Claude Agents](docs/contributing/custom-agents.md)
 

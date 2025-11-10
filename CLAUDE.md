@@ -305,14 +305,15 @@ Prisma has **no automatic rollback**. Options:
 
 ## 🤖 **CUSTOM AGENTS**
 
-NxLoy has **6 specialized custom agents** in `.claude/agents/` for domain-specific tasks:
+NxLoy has **7 specialized custom agents** in `.claude/agents/` for domain-specific tasks:
 
 1. **backend-code-reviewer** - Reviews NestJS backend code quality and standards
 2. **frontend-implementation-specialist** - Implements cross-platform features (Next.js + React Native)
 3. **architecture-reviewer** - Elite architectural review and security analysis
 4. **blockchain-nft-code-reviewer** - Reviews smart contracts and Web3 integrations
 5. **ai-mcp-genai-reviewer** - Reviews AI/MCP/GenAI code and integrations
-6. **product-market-researcher** - Market analysis and product validation
+6. **compliance-standards-enforcer** - Financial compliance, regulatory requirements, audit trails
+7. **product-market-researcher** - Market analysis and product validation
 
 ### **Using Custom Agents**
 

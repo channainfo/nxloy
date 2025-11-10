@@ -23,6 +23,7 @@ NxLoy includes **6 specialized Claude Code agents** to help with implementation,
 | **architecture-reviewer** | Elite architectural review, security, scalability analysis | Before major architectural decisions, during design phase | `/task @architecture-reviewer` |
 | **blockchain-nft-code-reviewer** | Reviews smart contracts, Web3 integrations, blockchain code | After implementing blockchain features or NFT functionality | `/task @blockchain-nft-code-reviewer` |
 | **ai-mcp-genai-reviewer** | Reviews AI/MCP/GenAI code for best practices and security | After implementing AI features or MCP integrations | `/task @ai-mcp-genai-reviewer` |
+| **compliance-standards-enforcer** | Reviews financial transactions, regulatory compliance, audit trails | For loyalty points, transactions, customer data, audit requirements | `/task @compliance-standards-enforcer` |
 | **product-market-researcher** | Analyzes market demand, competitive landscape, validates features | During product planning, feature validation, market research | `/task @product-market-researcher` |
 
 ## Example Workflows

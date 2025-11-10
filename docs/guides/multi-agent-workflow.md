@@ -1,12 +1,33 @@
 # Multi-Agent Development Workflow
 
-**Related**: [Worktree Workflow](./worktree-workflow.md) | [CLAUDE.md](../../CLAUDE.md) | [ADR-0001](../adr/0001-nx-monorepo-with-git-worktrees.md)
+**Related**: [Worktree Workflow](./worktree-workflow.md) | [Git Sync Workflow](./git-sync-workflow.md) | [CLAUDE.md](../../CLAUDE.md) | [ADR-0001](../adr/0001-nx-monorepo-with-git-worktrees.md)
 
 ---
 
 **Problem**: Multiple AI agents can't work on the same repository simultaneously without conflicts.
 
 **Solution**: Git worktrees create isolated working directories for parallel development.
+
+**When to Use**: Only for **2+ features simultaneously** with **multiple agents**. For single-agent development, use regular branches.
+
+## Do You Need Multi-Agent Worktrees?
+
+### Use Regular Branch (No Worktree) When:
+- ✅ Single agent, single feature (most common)
+- ✅ Sequential development (one feature after another)
+- ✅ Quick bug fixes or small changes
+
+**Example**: Building one feature at a time with one agent.
+
+### Use Multi-Agent Worktrees When:
+- ✅ 2+ agents working simultaneously on different features
+- ✅ Different domains (auth.prisma + loyalty.prisma avoid conflicts)
+- ✅ Need to preserve agent state while switching contexts
+- ✅ Long-running features with interruptions
+
+**Example**: Agent 1 builds OAuth while Agent 2 builds tier system (parallel).
+
+**Complete decision guide and lifecycle examples**: See [Git Sync Workflow](./git-sync-workflow.md)
 
 ## How It Works
 

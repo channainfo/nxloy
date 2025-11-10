@@ -203,7 +203,19 @@ git fetch origin
 git merge origin/main
 # or
 git rebase origin/main
+
+# Test after sync
+nx affected:test
 ```
+
+**For complete sync workflows**, including:
+- When to sync (daily, before major work, after other agents merge)
+- Mid-work syncing strategies
+- Multi-worktree coordination
+- Conflict resolution
+- Complete lifecycle examples
+
+**See**: [Git Sync Workflow Guide](./git-sync-workflow.md)
 
 ### Manual Worktree Management
 

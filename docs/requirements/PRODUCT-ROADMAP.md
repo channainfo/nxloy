@@ -738,6 +738,8 @@ Each feature is scored 1-5 on:
 | MRR | $225K | TBD | 🟡 Pending |
 | AI Recommendations Used | >60% | TBD | 🟡 Pending |
 | Automated Workflows | 5K+ | TBD | 🟡 Pending |
+| **Owned Channel Adoption** (NEW v2.0.0) | >50% email/SMS active | TBD | 🟡 Pending |
+| **Owned Channel Engagement** (NEW v2.0.0) | >40% weekly active | TBD | 🟡 Pending |
 | NPS | >60 | TBD | 🟡 Pending |
 
 ### Phase 4 (Month 12)
@@ -748,7 +750,24 @@ Each feature is scored 1-5 on:
 | ARR | $4.5M | TBD | 🟡 Pending |
 | NFTs Minted | 100K+ | TBD | 🟡 Pending |
 | Blockchain Txns | 500K+ | TBD | 🟡 Pending |
+| **Mobile App DAU/MAU** (NEW v2.0.0) | >30% daily active | TBD | 🟡 Pending |
+| **Social Ad Dependency** (NEW v2.0.0) | <40% CAC from paid social | TBD | 🟡 Pending |
 | NPS | >65 | TBD | 🟡 Pending |
+
+### Phase 5 (Month 18) **NEW v2.0.0**
+
+| Metric | Target | Actual | Status |
+|--------|--------|--------|--------|
+| Paying Customers | 5,000 | TBD | 🟡 Pending |
+| Enterprise Clients | 10 | TBD | 🟡 Pending |
+| Gen Z Customer Base | 50% | TBD | 🟡 Pending |
+| **In-App Social Feed DAU** (NEW v2.0.0) | >25% daily active | TBD | 🟡 Pending |
+| **Owned vs. Social Engagement** (NEW v2.0.0) | 60% in-app / 40% external social | TBD | 🟡 Pending |
+| **Social Ad Dependency** (NEW v2.0.0) | <30% CAC from paid social | TBD | 🟡 Pending |
+| **Owned Channel Migration Rate** (NEW v2.0.0) | >70% active on owned channels | TBD | 🟡 Pending |
+| NPS | >70 | TBD | 🟡 Pending |
+
+**Key Achievement**: By Phase 5, majority of customer engagement occurs on owned channels (app, email, SMS, in-app social feed) rather than external social platforms. This validates the "Acquire + Migrate" strategy.
 
 ## Release Strategy
 
@@ -794,6 +813,7 @@ Each feature is scored 1-5 on:
 |------|---------|---------|--------|
 | 2025-11-06 | 1.0.0 | Initial roadmap | Ploy Lab |
 | 2025-11-09 | 2.0.0 | Added Unified Wallet (Phase 1), Content Management (Phase 2), Viral Growth mechanics (Phase 2-3), Social & Community features (Phase 5) | Claude Code |
+| 2025-11-10 | 2.1.0 | Added owned channel migration metrics (Phase 3-5) to track "Acquire + Migrate" strategy success | Claude Code |
 
 ---
 

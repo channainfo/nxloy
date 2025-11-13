@@ -65,12 +65,58 @@ brew install k9s  # macOS
 packages/infrastructure/
 ├── docker/
 │   ├── backend.Dockerfile      # NestJS backend container
+│   ├── worker.Dockerfile       # Queue worker container (future)
 │   ├── web.Dockerfile          # Next.js web container
 │   ├── mobile-web.Dockerfile   # React Native web build
 │   └── ai-mcp.Dockerfile       # AI-MCP server container
 ├── docker-compose.yml          # Local development orchestration
 └── docker-compose.prod.yml     # Production-like local testing
 ```
+
+### Queue Worker Architecture (Future Enhancement)
+
+**Current State** (Phase 1-2):
+- Queue workers run **in-process** with the NestJS backend
+- Single command starts both API and workers: `pnpm dev:backend`
+- Sufficient for email jobs and low-moderate volumes (<1,000 jobs/minute)
+
+**Future State** (Post-Phase 2):
+When job volumes increase or CPU-intensive tasks are added, implement separate worker processes:
+
+```typescript
+// apps/backend/src/worker.ts (to be created)
+/**
+ * Standalone Queue Worker Process
+ *
+ * Runs Bull queue processors independently from API server.
+ * Enables horizontal scaling of workers.
+ *
+ * Usage:
+ *   pnpm queue:work    # Start worker process
+ *
+ * Environment Variables:
+ *   REDIS_HOST, REDIS_PORT - Redis connection
+ *   WORKER_CONCURRENCY - Jobs to process concurrently (default: 5)
+ *   QUEUE_NAMES - Comma-separated queue names (default: "email,notifications")
+ */
+```
+
+**Implementation Checklist** (when needed):
+- [ ] Create `apps/backend/src/worker.ts` entrypoint
+- [ ] Add `queue:work` npm script: `"queue:work": "nx serve backend --target=worker"`
+- [ ] Create Nx target in `apps/backend/project.json` for worker
+- [ ] Create `docker/worker.Dockerfile` for containerization
+- [ ] Update `docker-compose.yml` to include worker service
+- [ ] Add Kubernetes deployment for workers (`k8s/worker/deployment.yaml`)
+- [ ] Implement worker health checks and monitoring
+- [ ] Configure worker auto-scaling based on queue depth
+
+**Triggers for Implementation**:
+- ✓ Job volumes exceed 1,000/minute
+- ✓ Adding CPU-intensive tasks (image processing, video encoding, data analysis)
+- ✓ Need to scale workers independently from API servers
+- ✓ Production deployment requires resource isolation
+- ✓ Worker memory usage impacts API performance
 
 ### Planned Docker Commands (when files exist)
 

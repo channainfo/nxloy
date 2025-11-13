@@ -1,1 +1,2 @@
-export * from './lib/shared-utils.js';
+export * from './lib/shared-utils';
+export * from './lib/email.util';

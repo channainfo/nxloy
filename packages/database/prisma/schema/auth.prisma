@@ -11,34 +11,41 @@ model User {
   emailVerified DateTime?
   phone         String?   @unique
   phoneVerified DateTime?
-  passwordHash  String?   // Nullable for OAuth-only users
+  passwordHash  String? // Nullable for OAuth-only users
 
   // Profile
-  firstName     String
-  lastName      String
-  avatarUrl     String?
-  locale        Language  @default(EN)
-  timezone      String    @default("UTC")
+  firstName String
+  lastName  String
+  avatarUrl String?
+  locale    Language @default(EN)
+  timezone  String   @default("UTC")
 
   // Status
-  status        Status    @default(ACTIVE)
-  lastLoginAt   DateTime?
+  status      Status    @default(ACTIVE)
+  lastLoginAt DateTime?
+
+  // MFA (Multi-Factor Authentication)
+  mfaEnabled Boolean @default(false)
+  mfaSecret  String? // TOTP secret (base32 encoded)
+
+  // Security (Account Lockout)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime? // Account locked until this time
 
   // Relations
-  roles         UserRole[]
-  sessions      Session[]
-  refreshTokens RefreshToken[]
-  mfaDevices    MFADevice[]
-  auditLogs     AuditLog[]
-
-  // OAuth connections (can be extracted to separate model if needed)
-  oauthProvider String?   // google, facebook, apple, etc.
-  oauthId       String?   // Provider's user ID
+  roles              UserRole[]
+  sessions           Session[]
+  refreshTokens      RefreshToken[]
+  mfaDevices         MFADevice[]
+  auditLogs          AuditLog[]
+  accounts           Account[] // OAuth providers (NextAuth pattern)
+  verificationTokens VerificationToken[]
+  backupCodes        BackupCode[]
 
   // Timestamps
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime? // Soft delete
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
 
   @@map("users")
 }
@@ -48,50 +55,50 @@ model User {
 // ============================================================================
 
 model Role {
-  id          String       @id @default(cuid())
-  name        String       @unique // SUPER_ADMIN, BUSINESS_OWNER, BUSINESS_MANAGER, CUSTOMER, etc.
+  id          String  @id @default(cuid())
+  name        String  @unique // SUPER_ADMIN, BUSINESS_OWNER, BUSINESS_MANAGER, CUSTOMER, etc.
   description String?
-  isSystem    Boolean      @default(false) // System roles cannot be deleted
+  isSystem    Boolean @default(false) // System roles cannot be deleted
 
   // Relations
   permissions RolePermission[]
   users       UserRole[]
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("roles")
 }
 
 model Permission {
-  id          String           @id @default(cuid())
-  resource    String           // customers, loyalty_programs, rewards, etc.
-  action      String           // create, read, update, delete, publish, etc.
+  id          String  @id @default(cuid())
+  resource    String // customers, loyalty_programs, rewards, etc.
+  action      String // create, read, update, delete, publish, etc.
   description String?
 
   // Relations
-  roles       RolePermission[]
+  roles RolePermission[]
 
-  createdAt   DateTime         @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([resource, action])
   @@map("permissions")
 }
 
 model UserRole {
-  id        String   @id @default(cuid())
-  userId    String
-  roleId    String
+  id     String @id @default(cuid())
+  userId String
+  roleId String
 
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   // Optional: Scoped permissions (e.g., role only applies to specific business)
-  scopeType String?  // business, partner, global
-  scopeId   String?  // ID of the business/partner
+  scopeType String? // business, partner, global
+  scopeId   String? // ID of the business/partner
 
-  grantedAt DateTime @default(now())
+  grantedAt DateTime  @default(now())
   grantedBy String?
   expiresAt DateTime? // Optional: time-limited roles
 
@@ -100,15 +107,15 @@ model UserRole {
 }
 
 model RolePermission {
-  id           String     @id @default(cuid())
+  id           String @id @default(cuid())
   roleId       String
   permissionId String
 
   // Relations
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  grantedAt    DateTime   @default(now())
+  grantedAt DateTime @default(now())
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
@@ -119,26 +126,26 @@ model RolePermission {
 // ============================================================================
 
 model Session {
-  id           String    @id @default(cuid())
-  userId       String
-  token        String    @unique
+  id     String @id @default(cuid())
+  userId String
+  token  String @unique
 
   // Session metadata
-  ipAddress    String?
-  userAgent    String?
-  deviceId     String?
-  deviceName   String?
+  ipAddress  String?
+  userAgent  String?
+  deviceId   String?
+  deviceName String?
 
   // Lifecycle
   expiresAt    DateTime
   lastActiveAt DateTime  @default(now())
   revokedAt    DateTime?
-  revokedBy    String?   // User ID who revoked (for admin revocation)
+  revokedBy    String? // User ID who revoked (for admin revocation)
 
   // Relations
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([expiresAt])
@@ -146,21 +153,21 @@ model Session {
 }
 
 model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  token     String    @unique
+  id     String @id @default(cuid())
+  userId String
+  token  String @unique
 
   // Token family for refresh token rotation
-  family    String    // All rotations share same family
+  family String // All rotations share same family
 
-  expiresAt DateTime
-  revokedAt DateTime?
-  replacedBy String?  // ID of the new token that replaced this one
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  replacedBy String? // ID of the new token that replaced this one
 
   // Relations
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([family])
@@ -168,27 +175,121 @@ model RefreshToken {
 }
 
 // ============================================================================
+// MFA BACKUP CODES
+// ============================================================================
+
+model BackupCode {
+  id     String    @id @default(cuid())
+  userId String
+  code   String // SHA-256 hashed backup code
+  usedAt DateTime? // Null = unused, set when used (single-use)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("backup_codes")
+}
+
+// ============================================================================
+// MULTI-PROVIDER OAUTH (NextAuth Pattern)
+// ============================================================================
+
+model Account {
+  id                String @id @default(cuid())
+  userId            String
+  type              String // oauth, email
+  provider          String // google, apple, facebook, telegram, email
+  providerAccountId String // Provider's user ID
+
+  // OAuth tokens (encrypted with AES-256-GCM before storage)
+  refresh_token String? @db.Text
+  access_token  String? @db.Text
+  expires_at    Int?
+  token_type    String?
+  scope         String?
+  id_token      String? @db.Text
+
+  // Apple-specific (name only sent on first sign-in)
+  firstName String?
+  lastName  String?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// ============================================================================
+// PIN VERIFICATION (Hybrid: PIN + Email Link)
+// ============================================================================
+
+enum VerificationType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+  ACCOUNT_LINKING
+  TWO_FACTOR_AUTH
+  PHONE_NUMBER_CHANGE
+}
+
+model VerificationToken {
+  id         String           @id @default(cuid())
+  identifier String // Email or phone number
+  type       VerificationType
+  userId     String? // Optional: link to user if already exists
+
+  // PIN (6-digit, hashed with SHA-256 + salt)
+  pinHash String
+  pinSalt String
+
+  // Link token (UUID for email fallback)
+  token String @unique
+
+  // Security
+  attempts  Int       @default(0) // Track failed attempts (max 5)
+  usedAt    DateTime? // Single-use enforcement
+  expiresAt DateTime // 15 min for email, 10 min for SMS, 5 min for 2FA
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([identifier, type])
+  @@index([expiresAt])
+  @@map("verification_tokens")
+}
+
+// ============================================================================
 // MULTI-FACTOR AUTHENTICATION
 // ============================================================================
 
 enum MFAType {
-  TOTP        // Time-based OTP (Google Authenticator, Authy)
-  SMS         // SMS-based OTP
-  EMAIL       // Email-based OTP
+  TOTP // Time-based OTP (Google Authenticator, Authy)
+  SMS // SMS-based OTP
+  EMAIL // Email-based OTP
   BACKUP_CODE // Backup recovery codes
 }
 
 model MFADevice {
-  id         String    @id @default(cuid())
-  userId     String
-  type       MFAType
-  name       String    // User-friendly name: "iPhone", "Work Phone", etc.
+  id     String  @id @default(cuid())
+  userId String
+  type   MFAType
+  name   String // User-friendly name: "iPhone", "Work Phone", etc.
 
   // Device-specific data
-  secret     String?   // For TOTP
-  phone      String?   // For SMS
-  email      String?   // For EMAIL
-  backupCodes Json?    // Array of hashed backup codes
+  secret      String? // For TOTP
+  phone       String? // For SMS
+  email       String? // For EMAIL
+  backupCodes Json? // Array of hashed backup codes
 
   // Status
   isVerified Boolean   @default(false)
@@ -196,10 +297,10 @@ model MFADevice {
   lastUsedAt DateTime?
 
   // Relations
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@map("mfa_devices")
@@ -224,24 +325,24 @@ enum AuditAction {
 
 model AuditLog {
   id         String      @id @default(cuid())
-  userId     String?     // Nullable for system actions
+  userId     String? // Nullable for system actions
   action     AuditAction
-  resource   String      // Table/entity name
-  resourceId String?     // ID of the affected record
+  resource   String // Table/entity name
+  resourceId String? // ID of the affected record
 
   // Change tracking
-  oldValues  Json?       // Previous state
-  newValues  Json?       // New state
-  metadata   Json?       // Additional context
+  oldValues Json? // Previous state
+  newValues Json? // New state
+  metadata  Json? // Additional context
 
   // Request context
-  ipAddress  String?
-  userAgent  String?
+  ipAddress String?
+  userAgent String?
 
   // Relations
-  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  createdAt  DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([resource, resourceId])

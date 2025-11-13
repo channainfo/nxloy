@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to NxLoy</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4F46E5;
+    }
+    h1 {
+      color: #1F2937;
+      font-size: 28px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .welcome-message {
+      text-align: center;
+      font-size: 18px;
+      color: #4B5563;
+      margin: 24px 0;
+    }
+    .features {
+      margin: 32px 0;
+    }
+    .feature {
+      display: flex;
+      align-items: start;
+      margin: 16px 0;
+    }
+    .feature-icon {
+      font-size: 24px;
+      margin-right: 16px;
+    }
+    .feature-text h3 {
+      margin: 0 0 4px 0;
+      color: #1F2937;
+      font-size: 16px;
+    }
+    .feature-text p {
+      margin: 0;
+      color: #6B7280;
+      font-size: 14px;
+    }
+    .cta {
+      text-align: center;
+      margin: 32px 0;
+    }
+    .button {
+      display: inline-block;
+      background-color: #4F46E5;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 14px 40px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 16px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #E5E7EB;
+      font-size: 14px;
+      color: #6B7280;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">NxLoy</div>
+    </div>
+
+    <h1>Welcome to NxLoy! 🎉</h1>
+
+    <div class="welcome-message">
+      <p>Hi {{firstName}},</p>
+      <p><strong>Your account has been successfully created!</strong></p>
+    </div>
+
+    <p>Thank you for joining NxLoy, the next-generation loyalty platform. We're excited to have you on board!</p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">🎁</div>
+        <div class="feature-text">
+          <h3>Earn Rewards</h3>
+          <p>Collect points with every purchase and unlock exclusive rewards</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-text">
+          <h3>Instant Redemption</h3>
+          <p>Redeem your points instantly for discounts and special offers</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-text">
+          <h3>Secure & Private</h3>
+          <p>Your data is protected with enterprise-grade security</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">📱</div>
+        <div class="feature-text">
+          <h3>Mobile Ready</h3>
+          <p>Access your account anywhere, anytime on any device</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta">
+      <a href="{{dashboardLink}}" class="button">Go to Dashboard</a>
+    </div>
+
+    <p style="text-align: center; color: #6B7280; font-size: 14px; margin-top: 32px;">
+      Need help getting started? Check out our <a href="{{helpLink}}" style="color: #4F46E5;">Help Center</a> or contact our support team.
+    </p>
+
+    <div class="footer">
+      <p>You're receiving this email because you signed up for NxLoy.</p>
+      <p>&copy; 2025 NxLoy. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

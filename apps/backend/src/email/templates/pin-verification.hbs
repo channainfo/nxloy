@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Verification PIN</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4F46E5;
+    }
+    h1 {
+      color: #1F2937;
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+    .pin-container {
+      background-color: #F3F4F6;
+      border-radius: 8px;
+      padding: 32px;
+      text-align: center;
+      margin: 32px 0;
+    }
+    .pin {
+      font-size: 56px;
+      font-weight: bold;
+      letter-spacing: 12px;
+      color: #4F46E5;
+      font-family: 'Courier New', monospace;
+    }
+    .expiry {
+      margin-top: 16px;
+      color: #6B7280;
+      font-size: 14px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #E5E7EB;
+      font-size: 14px;
+      color: #6B7280;
+      text-align: center;
+    }
+    .warning {
+      background-color: #FEF3C7;
+      border-left: 4px solid #F59E0B;
+      padding: 12px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">NxLoy</div>
+    </div>
+
+    <h1>Your Verification PIN</h1>
+
+    <p>Hello,</p>
+
+    <p>You requested a verification PIN for {{purpose}}. Please use the code below:</p>
+
+    <div class="pin-container">
+      <div class="pin">{{pin}}</div>
+      <div class="expiry">Expires in {{expiryMinutes}} minutes</div>
+    </div>
+
+    <div class="warning">
+      <strong>Security Notice:</strong> Never share this PIN with anyone. NxLoy staff will never ask for your PIN.
+    </div>
+
+    <div class="footer">
+      <p>If you didn't request this PIN, please ignore this email or contact support.</p>
+      <p>&copy; 2025 NxLoy. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

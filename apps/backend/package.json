@@ -11,6 +11,7 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.9.0",
     "@nestjs/testing": "^11.0.0"
   }
 }

@@ -37,14 +37,14 @@ enum Currency {
 }
 
 enum Language {
-  EN    // English
-  TH    // Thai
-  VI    // Vietnamese
-  ID    // Indonesian
-  MS    // Malay
-  ZH    // Chinese
-  JA    // Japanese
-  KO    // Korean
+  EN // English
+  TH // Thai
+  VI // Vietnamese
+  ID // Indonesian
+  MS // Malay
+  ZH // Chinese
+  JA // Japanese
+  KO // Korean
 }
 
 enum NotificationChannel {

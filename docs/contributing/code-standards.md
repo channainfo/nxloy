@@ -53,6 +53,59 @@ From `CLAUDE.md`:
   }
   ```
 
+### 5. Environment Variables - NEVER Use Fallback Defaults
+
+**Critical Rule**: Never use `process.env.VAR || 'default'` - this hides missing configuration!
+
+```typescript
+// ❌ WRONG - Hides missing config in production
+const port = process.env.PORT || 8080;
+const apiKey = process.env.API_KEY || 'default-key';
+const dbUrl = process.env.DATABASE_URL || 'postgresql://localhost/dev';
+
+// ✅ CORRECT - Fails fast if missing
+import { requireEnv, requireEnvInt } from './common/utils/env.util';
+
+const port = requireEnvInt('PORT');  // Throws if missing or invalid
+const apiKey = requireEnv('API_KEY'); // Throws if missing or empty
+const dbUrl = requireEnv('DATABASE_URL'); // Throws if missing
+```
+
+**Why?**
+- Fallback defaults let broken config reach production
+- Tests pass locally with defaults, fail in production
+- Silent failures are hard to debug
+- Security issues (default API keys, ports, etc.)
+
+**Use the env.util helper**:
+
+```typescript
+import {
+  requireEnv,      // Required string variable
+  requireEnvInt,   // Required integer variable
+  optionalEnv,     // Optional string variable
+  optionalEnvInt   // Optional integer variable
+} from './common/utils/env.util';
+
+// Required variables
+const jwtSecret = requireEnv('JWT_SECRET');
+const port = requireEnvInt('PORT');
+
+// Truly optional variables (features that can be disabled)
+const debugMode = optionalEnv('DEBUG_MODE');
+const maxRetries = optionalEnvInt('MAX_RETRIES') ?? 3; // Use ?? for optional defaults
+```
+
+**Error messages are intentionally clear**:
+```
+Error: PORT environment variable is required but not defined.
+Please set it in your .env file or environment.
+
+Error: REDIS_PORT must be a valid integer, got: "not-a-number"
+```
+
+**See also**: [Environment Configuration Guide](../guides/ENVIRONMENT-CONFIGURATION.md)
+
 ## TypeScript Standards
 
 **Use strict TypeScript**:

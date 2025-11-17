@@ -2,8 +2,9 @@
 // This file contains datasource, generator, and shared types/enums used across all domains
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../../../../node_modules/.prisma/client"
+  provider      = "prisma-client-js"
+  output        = "../../../../node_modules/.prisma/client"
+  binaryTargets = ["native", "darwin-arm64"]
 }
 
 datasource db {
@@ -37,14 +38,14 @@ enum Currency {
 }
 
 enum Language {
-  EN    // English
-  TH    // Thai
-  VI    // Vietnamese
-  ID    // Indonesian
-  MS    // Malay
-  ZH    // Chinese
-  JA    // Japanese
-  KO    // Korean
+  EN // English
+  TH // Thai
+  VI // Vietnamese
+  ID // Indonesian
+  MS // Malay
+  ZH // Chinese
+  JA // Japanese
+  KO // Korean
 }
 
 enum NotificationChannel {

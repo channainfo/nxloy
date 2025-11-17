@@ -66,9 +66,9 @@ const config = {
 nx affected:test && nx affected:lint && nx run-many --target=typecheck --all
 
 # Run specific app
-nx serve backend
-nx serve web
-nx run mobile:start
+nx serve backend          # Start backend API server (requires env vars)
+nx serve web             # Start Next.js web app
+nx run mobile:start      # Start React Native mobile app
 
 # Build specific app
 nx build backend
@@ -79,6 +79,172 @@ nx affected:test
 # Visualize dependency graph
 nx graph
 ```
+
+### **Backend & Queue Setup**
+
+The backend uses **Bull** (Redis-based queue) for background job processing.
+
+**Prerequisites**:
+```bash
+# Install Redis (macOS)
+brew install redis
+
+# Start Redis server
+redis-server
+
+# Or use Docker
+docker run -d -p 6379:6379 redis:7-alpine
+```
+
+**Required Environment Variables**:
+```bash
+# Backend API
+PORT=3000
+FRONTEND_URL=http://localhost:4200
+NODE_ENV=development
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/nxloy_dev
+
+# Redis (for queues)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=              # Optional: leave empty if no password
+
+# JWT
+JWT_SECRET=your-secret-key
+JWT_EXPIRATION=15m
+JWT_REFRESH_EXPIRATION=7d
+
+# Email (for queue jobs) - See docs/setup/smtp-setup.md
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false                # true for 465 (SSL), false for 587 (TLS)
+SMTP_USER=your-email@example.com
+SMTP_PASSWORD=your-password
+SMTP_FROM_EMAIL=noreply@nxloy.com
+SMTP_FROM_NAME=NxLoy Platform
+
+# OAuth (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+
+FACEBOOK_CLIENT_ID=
+FACEBOOK_CLIENT_SECRET=
+FACEBOOK_CALLBACK_URL=http://localhost:3000/api/auth/facebook/callback
+
+APPLE_CLIENT_ID=
+APPLE_TEAM_ID=
+APPLE_KEY_ID=
+APPLE_PRIVATE_KEY=
+APPLE_CALLBACK_URL=http://localhost:3000/api/auth/apple/callback
+```
+
+**Running Backend**:
+```bash
+# Using pnpm scripts (recommended):
+# 1. Start Redis (required for queues)
+pnpm redis:start
+
+# 2. Start backend server (in separate terminal)
+pnpm dev:backend
+
+# 3. Start web app (in separate terminal)
+pnpm dev:web
+
+# Or using Nx directly:
+nx serve backend
+
+# Backend runs on http://localhost:3000/api
+# Queue jobs (emails, etc.) process automatically via Bull workers
+```
+
+**Queue Monitoring**:
+```bash
+# Using pnpm scripts:
+pnpm queue:stats        # Check queue statistics
+pnpm redis:monitor      # Monitor queue in real-time
+pnpm redis:stop         # Stop Redis server
+
+# Or using redis-cli directly:
+redis-cli KEYS "bull:email:*"
+redis-cli MONITOR
+
+# Optional: Install Bull Board for UI monitoring
+# https://github.com/felixmosh/bull-board
+```
+
+**Queue Details**:
+- **Email Queue**: Handles async email sending (verification, password reset)
+- **Retry Logic**: 3 attempts with exponential backoff (2s, 4s, 8s)
+- **Processors**: Located in `apps/backend/src/queue/processors/`
+- **Module**: `apps/backend/src/queue/queue.module.ts`
+
+### **SMTP Server Setup**
+
+**📖 Full SMTP Setup Guide**: [docs/setup/smtp-setup.md](docs/setup/smtp-setup.md)
+
+The backend requires an SMTP server for sending emails (verification, password reset, etc.).
+
+**Quick Start - Local Development (MailHog)**:
+```bash
+# Install MailHog (macOS)
+brew install mailhog
+
+# Start MailHog
+mailhog
+
+# View sent emails at http://localhost:8025
+```
+
+**Local Development `.env`**:
+```bash
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM_EMAIL=dev@nxloy.local
+SMTP_FROM_NAME=NxLoy Dev
+```
+
+**Production Options**:
+- **SendGrid** (recommended): Free tier 100 emails/day, production-ready
+- **AWS SES**: $0.10 per 1,000 emails, best for high volume
+- **Gmail**: Quick testing only, 500 emails/day limit
+- **Mailgun**: 5,000 emails/month free for 3 months
+- **Postmark**: $15/month for 10,000 emails, excellent deliverability
+
+**Common Production `.env` (SendGrid)**:
+```bash
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=apikey
+SMTP_PASSWORD=SG.your-sendgrid-api-key
+SMTP_FROM_EMAIL=noreply@yourdomain.com
+SMTP_FROM_NAME=NxLoy Platform
+```
+
+**Verification**:
+```bash
+# Backend logs should show on startup:
+# [EmailService] SMTP connection verified
+```
+
+**Troubleshooting**:
+- Connection refused → Check SMTP_HOST and SMTP_PORT
+- Auth failed → Verify SMTP_USER and SMTP_PASSWORD
+- TLS errors → Ensure SMTP_PORT matches SMTP_SECURE (587=false, 465=true)
+- Emails not arriving → Check spam folder, verify sender domain
+
+**📖 Detailed Setup**: See [docs/setup/smtp-setup.md](docs/setup/smtp-setup.md) for:
+- MailHog, MailCatcher, smtp4dev installation
+- Gmail App Password setup
+- SendGrid API key configuration
+- AWS SES, Mailgun, Postmark setup
+- Complete troubleshooting guide
 
 ### **Code Standards**
 - **Max 40 lines per method** (excluding comments)
@@ -209,29 +375,57 @@ nx serve backend
 
 ### **Migration Workflow**
 
-**Daily Development**:
+**Daily Development** (using root pnpm scripts):
 ```bash
-# 1. Edit schema file (e.g., auth.prisma)
+# 1. Edit schema file (e.g., packages/database/prisma/schema/auth.prisma)
+
 # 2. Create migration
+pnpm db:migrate --name descriptive_name
+
+# 3. Generate Prisma Client
+pnpm db:generate
+
+# 4. Validate schema
+pnpm db:validate
+
+# 5. Format schema files
+pnpm db:format
+
+# 6. Run tests
+nx affected:test
+
+# Optional: Open Prisma Studio (database GUI)
+pnpm db:studio
+```
+
+**Daily Development** (alternative - from database package):
+```bash
 cd packages/database
-pnpm prisma migrate dev --name descriptive_name
-
-# 3. Verify generated SQL
-cat prisma/migrations/$(ls -t prisma/migrations | head -1)/migration.sql
-
-# 4. Test migration
-pnpm prisma migrate reset  # Reset + reapply all
-pnpm prisma generate        # Regenerate Prisma Client
-
-# 5. Run tests
+pnpm prisma:migrate --name descriptive_name
+pnpm prisma:generate
+pnpm prisma:validate
+pnpm prisma:format
 cd ../..
 nx affected:test
 ```
 
 **Production Deployment**:
 ```bash
+# Using root script (recommended)
+pnpm db:migrate:deploy
+
+# Or from database package
 cd packages/database
-pnpm prisma migrate deploy  # Apply pending migrations
+pnpm prisma:migrate:deploy
+```
+
+**Database Management**:
+```bash
+# Seed database with test data
+pnpm db:seed
+
+# Reset database (WARNING: deletes all data!)
+pnpm db:reset
 ```
 
 ### **Migration Rules**
@@ -308,7 +502,7 @@ Prisma has **no automatic rollback**. Options:
 NxLoy has **7 specialized custom agents** in `.claude/agents/` for domain-specific tasks:
 
 1. **backend-code-reviewer** - Reviews NestJS backend code quality and standards
-2. **frontend-implementation-specialist** - Implements cross-platform features (Next.js + React Native)
+2. **frontend-design-implementation-specialist** - Designs UX/UI and implements cross-platform features (Next.js + React Native)
 3. **architecture-reviewer** - Elite architectural review and security analysis
 4. **blockchain-nft-code-reviewer** - Reviews smart contracts and Web3 integrations
 5. **ai-mcp-genai-reviewer** - Reviews AI/MCP/GenAI code and integrations
@@ -323,11 +517,20 @@ Invoke agents for specialized tasks:
 # Code review before PR
 /task @backend-code-reviewer Review apps/backend/src/loyalty/points.service.ts
 
-# Implement cross-platform feature
-/task @frontend-implementation-specialist Create customer profile screen for web and mobile
+# Design and implement cross-platform feature
+/task @frontend-design-implementation-specialist Design and build a waitlist landing page for early access
+
+# Create customer profile screen (design + implementation)
+/task @frontend-design-implementation-specialist Create customer profile screen for web and mobile
+
+# Design a color system
+/task @frontend-design-implementation-specialist Create design tokens and color system for the app
 
 # Validate architecture
 /task @architecture-reviewer Review multi-tenant notification system design
+
+# Validate product features
+/task @product-market-researcher Research competitor referral reward systems
 ```
 
 ### **Agent Rules**

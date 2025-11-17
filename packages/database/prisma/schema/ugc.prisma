@@ -10,62 +10,62 @@
 // ============================================================================
 
 enum UGCContentType {
-  PHOTO          // Single image
-  VIDEO          // Short-form video
-  TEXT_REVIEW    // Written review
-  PHOTO_REVIEW   // Review with photo
-  VIDEO_REVIEW   // Review with video
+  PHOTO // Single image
+  VIDEO // Short-form video
+  TEXT_REVIEW // Written review
+  PHOTO_REVIEW // Review with photo
+  VIDEO_REVIEW // Review with video
 }
 
 enum UGCPlatform {
-  DIRECT_UPLOAD  // Uploaded via NxLoy app/web
-  INSTAGRAM      // Tagged post on Instagram
-  TIKTOK         // Tagged video on TikTok
-  FACEBOOK       // Facebook post
-  TWITTER        // Twitter/X post
-  YOUTUBE        // YouTube video
+  DIRECT_UPLOAD // Uploaded via NxLoy app/web
+  INSTAGRAM // Tagged post on Instagram
+  TIKTOK // Tagged video on TikTok
+  FACEBOOK // Facebook post
+  TWITTER // Twitter/X post
+  YOUTUBE // YouTube video
 }
 
 enum UGCStatus {
-  PENDING        // Awaiting moderation
-  APPROVED       // Passed moderation, visible
-  REJECTED       // Failed moderation
-  FLAGGED        // Flagged for human review
-  REMOVED        // Removed by admin/user
+  PENDING // Awaiting moderation
+  APPROVED // Passed moderation, visible
+  REJECTED // Failed moderation
+  FLAGGED // Flagged for human review
+  REMOVED // Removed by admin/user
 }
 
 model UGCSubmission {
-  id          String         @id @default(cuid())
+  id String @id @default(cuid())
 
   // Multi-tenant & customer
-  businessId  String         // Which business this UGC belongs to
-  customerId  String         // Which customer created this
+  businessId String // Which business this UGC belongs to
+  customerId String // Which customer created this
 
   // Content metadata
-  contentType UGCContentType
-  platform    UGCPlatform
-  contentUrl  String         // S3/CDN URL for uploaded content
-  thumbnailUrl String?       // Thumbnail for videos
-  caption     String?        // User's caption/review text
-  hashtags    String[]       // Array of hashtags used
+  contentType  UGCContentType
+  platform     UGCPlatform
+  contentUrl   String // S3/CDN URL for uploaded content
+  thumbnailUrl String? // Thumbnail for videos
+  caption      String? // User's caption/review text
+  hashtags     String[] // Array of hashtags used
 
   // Product association (optional - UGC may not reference specific product)
-  productId   String?
-  productSku  String?
+  productId  String?
+  productSku String?
 
   // External platform data (for Instagram/TikTok posts)
-  externalId  String?        // Platform's post ID
-  externalUrl String?        // Link to original post
-  permalink   String?        // Permanent link
+  externalId  String? // Platform's post ID
+  externalUrl String? // Link to original post
+  permalink   String? // Permanent link
 
   // AI Quality Scoring (0-100)
-  qualityScore     Float?    @default(0)
-  viralityScore    Float?    @default(0)  // Predicted viral potential
-  sentimentScore   Float?    // -1 (negative) to +1 (positive)
-  engagementScore  Float?    // Predicted engagement rate
+  qualityScore    Float? @default(0)
+  viralityScore   Float? @default(0) // Predicted viral potential
+  sentimentScore  Float? // -1 (negative) to +1 (positive)
+  engagementScore Float? // Predicted engagement rate
 
   // AI Analysis metadata
-  aiAnalysis  Json?          // Full AI analysis results
+  aiAnalysis Json? // Full AI analysis results
   // Example: {
   //   "imageQuality": {"resolution": "high", "lighting": "good", "focus": "sharp"},
   //   "videoMetrics": {"duration": 15, "hasFaces": true, "hasMusic": true},
@@ -74,46 +74,46 @@ model UGCSubmission {
   // }
 
   // Moderation
-  status      UGCStatus      @default(PENDING)
-  moderatedAt DateTime?
-  moderatedBy String?        // User ID of moderator
+  status          UGCStatus @default(PENDING)
+  moderatedAt     DateTime?
+  moderatedBy     String? // User ID of moderator
   rejectionReason String?
 
   // Reward tracking
-  pointsAwarded    Int        @default(0)
-  pointsAwardedAt  DateTime?
-  bonusPointsEarned Int       @default(0)  // Extra points for high quality/sharing
+  pointsAwarded     Int       @default(0)
+  pointsAwardedAt   DateTime?
+  bonusPointsEarned Int       @default(0) // Extra points for high quality/sharing
 
   // Social sharing tracking
-  sharedToSocial   Boolean    @default(false)
-  shareCount       Int        @default(0)
-  shareBonusAwarded Boolean   @default(false)
+  sharedToSocial    Boolean @default(false)
+  shareCount        Int     @default(0)
+  shareBonusAwarded Boolean @default(false)
 
   // Engagement metrics (updated periodically)
-  viewCount    Int           @default(0)
-  likeCount    Int           @default(0)
-  commentCount Int           @default(0)
-  shareCountExternal Int     @default(0)  // Shares on external platforms
+  viewCount          Int @default(0)
+  likeCount          Int @default(0)
+  commentCount       Int @default(0)
+  shareCountExternal Int @default(0) // Shares on external platforms
 
   // GDPR & Consent
-  consentGiven      Boolean   @default(false)
-  consentTypes      String[]  // ["website", "social", "email", "ads"]
+  consentGiven       Boolean  @default(false)
+  consentTypes       String[] // ["website", "social", "email", "ads"]
   canUseCommercially Boolean  @default(false)
   canSharePlatforms  Boolean  @default(false)
 
   // Rights management
-  uploadedBy   String         // User ID who uploaded
-  ipAddress    String?
-  userAgent    String?
+  uploadedBy String // User ID who uploaded
+  ipAddress  String?
+  userAgent  String?
 
   // Relations
-  moderation   UGCModeration[]
-  reports      UGCReport[]
+  moderation UGCModeration[]
+  reports    UGCReport[]
 
   // Timestamps
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  deletedAt    DateTime?      // Soft delete
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
 
   @@index([businessId, status])
   @@index([customerId])
@@ -129,11 +129,11 @@ model UGCSubmission {
 // ============================================================================
 
 enum ModerationType {
-  AI_AUTO_APPROVE    // AI automatically approved
-  AI_AUTO_REJECT     // AI automatically rejected
-  HUMAN_REVIEW       // Human moderator reviewed
-  USER_REPORTED      // Flagged by user report
-  SYSTEM_FLAG        // Flagged by system rules
+  AI_AUTO_APPROVE // AI automatically approved
+  AI_AUTO_REJECT // AI automatically rejected
+  HUMAN_REVIEW // Human moderator reviewed
+  USER_REPORTED // Flagged by user report
+  SYSTEM_FLAG // Flagged by system rules
 }
 
 enum ModerationDecision {
@@ -145,28 +145,28 @@ enum ModerationDecision {
 }
 
 model UGCModeration {
-  id          String             @id @default(cuid())
+  id String @id @default(cuid())
 
   // Relations
   submissionId String
-  submission   UGCSubmission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submission   UGCSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   // Moderation details
   type        ModerationType
   decision    ModerationDecision
-  moderatorId String?            // User ID of human moderator (null for AI)
+  moderatorId String? // User ID of human moderator (null for AI)
 
   // Reasoning
-  reason      String?
-  flags       String[]           // ["profanity", "spam", "fake_review", "competitor_mention"]
-  confidence  Float?             // AI confidence score (0-100)
+  reason     String?
+  flags      String[] // ["profanity", "spam", "fake_review", "competitor_mention"]
+  confidence Float? // AI confidence score (0-100)
 
   // AI Analysis
-  aiModel     String?            // "gpt-4o-vision", "custom-moderation-v1"
-  aiMetadata  Json?
+  aiModel    String? // "gpt-4o-vision", "custom-moderation-v1"
+  aiMetadata Json?
 
   // Timestamps
-  createdAt   DateTime           @default(now())
+  createdAt DateTime @default(now())
 
   @@index([submissionId])
   @@index([type, decision])
@@ -195,30 +195,30 @@ enum ReportStatus {
 }
 
 model UGCReport {
-  id          String        @id @default(cuid())
+  id String @id @default(cuid())
 
   // Relations
   submissionId String
   submission   UGCSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   // Reporter
-  reportedBy  String        // User ID
-  ipAddress   String?
+  reportedBy String // User ID
+  ipAddress  String?
 
   // Report details
   reason      ReportReason
   description String?
-  evidence    Json?         // Screenshots, links, etc.
+  evidence    Json? // Screenshots, links, etc.
 
   // Resolution
-  status      ReportStatus  @default(PENDING)
-  resolvedAt  DateTime?
-  resolvedBy  String?       // Moderator user ID
-  resolution  String?       // What action was taken
+  status     ReportStatus @default(PENDING)
+  resolvedAt DateTime?
+  resolvedBy String? // Moderator user ID
+  resolution String? // What action was taken
 
   // Timestamps
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([submissionId])
   @@index([status])

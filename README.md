@@ -79,8 +79,11 @@ Modern multi-tenant loyalty platform with **unified wallet**, **viral growth mec
 - **Node.js**: 22.12.0+ ([Download](https://nodejs.org/))
 - **pnpm**: 10.14.0+ ([Install](https://pnpm.io/))
 - **PostgreSQL**: 16 or 17 ([Download](https://www.postgresql.org/))
+- **Redis**: 7.0+ ([Download](https://redis.io/)) - Required for queues
+- **SMTP Server**: For email delivery (MailHog recommended for local dev)
 
 **📖 Full Prerequisites**: [docs/setup/prerequisites.md](docs/setup/prerequisites.md)
+**📖 SMTP Setup**: [docs/setup/smtp-setup.md](docs/setup/smtp-setup.md)
 
 ### 2. Installation
 
@@ -96,25 +99,56 @@ pnpm install
 cp .env.example .env
 # Edit .env with your configuration
 
-# Initialize database
-cd packages/database
-pnpm prisma migrate dev
-pnpm prisma generate
+# Initialize database (using root scripts)
+pnpm db:migrate
+pnpm db:generate
+
+# Or from database package directly
+# cd packages/database && pnpm prisma:migrate && pnpm prisma:generate && cd ../..
+
+# Start Redis (required for backend queues)
+redis-server
+# Or use Docker: docker run -d -p 6379:6379 redis:7-alpine
+
+# Set up SMTP (for email delivery)
+# Option 1: MailHog (recommended for local dev)
+brew install mailhog
+mailhog  # Web UI at http://localhost:8025
+
+# Option 2: Use Gmail, SendGrid, or other providers
+# See docs/setup/smtp-setup.md for detailed setup
 ```
 
 **📖 Detailed Installation**: [docs/setup/installation.md](docs/setup/installation.md)
+**📖 SMTP Setup**: [docs/setup/smtp-setup.md](docs/setup/smtp-setup.md)
 
 ### 3. Run Applications
 
+**Using pnpm scripts (recommended)**:
 ```bash
-# Backend API (http://localhost:8080)
-nx serve backend
+# 1. Start Redis (in separate terminal - required for backend)
+pnpm redis:start
 
-# Web Frontend (http://localhost:8081)
-nx serve web
+# 2. Start Backend API (in separate terminal)
+pnpm dev:backend
+# Backend runs on http://localhost:8080/api
+# Queue workers run automatically (email verification, etc.)
 
-# Mobile (iOS/Android/Web)
-nx run mobile:start
+# 3. Start Web Frontend (in separate terminal)
+pnpm dev:web
+# Web app runs on http://localhost:8081
+
+# 4. Start Mobile (optional, in separate terminal)
+pnpm dev:mobile
+# Mobile dev server on http://localhost:8082
+```
+
+**Or using Nx directly**:
+```bash
+redis-server            # Terminal 1: Redis
+nx serve backend        # Terminal 2: Backend
+nx serve web            # Terminal 3: Web
+nx run mobile:start     # Terminal 4: Mobile (optional)
 ```
 
 **📖 Quick Start Guide**: [docs/setup/quick-start.md](docs/setup/quick-start.md)
